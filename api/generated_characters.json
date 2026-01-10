@@ -1,0 +1,1688 @@
+{
+  "metadata": {
+    "generated_at": "2025-11-23T11:29:13.877342",
+    "setting": "small rural town with park, pool, soccer field, farmer market, school, farm, library, and hospital",
+    "num_characters": 23,
+    "model": "claude-sonnet-4-5-20250929"
+  },
+  "characters": [
+    {
+      "name": "Marcus Chen",
+      "age": 42,
+      "race": "Asian",
+      "gender": "Male",
+      "occupation": "Town Mayor",
+      "background": "Second-generation Chinese-American who became mayor after his father's hardware store went bankrupt. Married to Diane in a loveless marriage and having an affair with Patricia. Craves power and respect above all else.",
+      "personality_traits": [
+        "ambition: high",
+        "confrontational: high",
+        "sociable: medium",
+        "core_motivation: gain respect and power",
+        "controlling",
+        "insecure",
+        "calculating",
+        "emotionally distant"
+      ],
+      "appearance": {
+        "hair": 8,
+        "shoes": 5,
+        "bottom": 0,
+        "top": 10
+      },
+      "relationships": [
+        {
+          "target_name": "Diane Chen",
+          "relationship_type": "Family",
+          "relationship_summary": "Loveless marriage of convenience, knows she married him for stability not love",
+          "relationship_score": 15
+        },
+        {
+          "target_name": "Emma Chen",
+          "relationship_type": "Family",
+          "relationship_summary": "Emotionally distant father who only notices achievements, not emotions",
+          "relationship_score": 25
+        },
+        {
+          "target_name": "Patricia Webb",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Secret affair, promises to leave wife but never will, uses her for validation",
+          "relationship_score": 55
+        },
+        {
+          "target_name": "Robert Hawkins",
+          "relationship_type": "Rival",
+          "relationship_summary": "Bitter enemy over land development deal, sees him as obstacle to progress",
+          "relationship_score": -60
+        },
+        {
+          "target_name": "Dr. James Okonkwo",
+          "relationship_type": "Professional",
+          "relationship_summary": "Jealous of his natural command of respect",
+          "relationship_score": -15
+        },
+        {
+          "target_name": "Dorothy Washington",
+          "relationship_type": "Professional",
+          "relationship_summary": "Tension over Emma's education and Dorothy's criticism of his priorities",
+          "relationship_score": 10
+        }
+      ],
+      "needs": {
+        "happiness": 45,
+        "energy": 60,
+        "hunger": 65,
+        "hygiene": 75
+      }
+    },
+    {
+      "name": "Robert Hawkins",
+      "age": 58,
+      "race": "White",
+      "gender": "Male",
+      "occupation": "Farmer",
+      "background": "Fourth-generation farmer recently widowed, raising son Jake alone. In bitter feud with Mayor Marcus over land development that would destroy part of his family farm. Struggles with grief expressed as anger.",
+      "personality_traits": [
+        "ambition: medium",
+        "confrontational: high",
+        "sociable: low",
+        "core_motivation: protect family legacy",
+        "stubborn",
+        "traditional",
+        "grieving",
+        "protective"
+      ],
+      "appearance": {
+        "hair": 3,
+        "shoes": 6,
+        "bottom": 3,
+        "top": 5
+      },
+      "relationships": [
+        {
+          "target_name": "Jake Hawkins",
+          "relationship_type": "Family",
+          "relationship_summary": "Strained relationship with son who wants to leave the farm, feels betrayed",
+          "relationship_score": 20
+        },
+        {
+          "target_name": "Miguel Rodriguez",
+          "relationship_type": "Professional",
+          "relationship_summary": "Loyal farmhand he treats like family, trusts completely",
+          "relationship_score": 75
+        },
+        {
+          "target_name": "Marcus Chen",
+          "relationship_type": "Rival",
+          "relationship_summary": "Bitter enemy trying to destroy his family legacy for profit",
+          "relationship_score": -70
+        },
+        {
+          "target_name": "Helen Park",
+          "relationship_type": "Friend",
+          "relationship_summary": "Late wife's best friend with unrequited feelings for him, creates awkward tension",
+          "relationship_score": 35
+        },
+        {
+          "target_name": "Luis Alvarez",
+          "relationship_type": "Rival",
+          "relationship_summary": "Soccer coach interfering with his son, encouraging Jake to abandon the farm",
+          "relationship_score": -40
+        },
+        {
+          "target_name": "Carl Henderson",
+          "relationship_type": "Friend",
+          "relationship_summary": "Old friend who supports him against Marcus",
+          "relationship_score": 60
+        }
+      ],
+      "needs": {
+        "happiness": 35,
+        "energy": 55,
+        "hunger": 60,
+        "hygiene": 50
+      }
+    },
+    {
+      "name": "Miguel Rodriguez",
+      "age": 28,
+      "race": "Hispanic",
+      "gender": "Male",
+      "occupation": "Farmhand",
+      "background": "Mexican immigrant who came at age 15, works loyally for Robert. Secretly in love with Sofia who is dating Kevin. Wants to bring his younger sister from Mexico and achieve stability.",
+      "personality_traits": [
+        "ambition: medium",
+        "confrontational: low",
+        "sociable: medium",
+        "core_motivation: achieve stability and family reunification",
+        "shy",
+        "loyal",
+        "hardworking",
+        "insecure"
+      ],
+      "appearance": {
+        "hair": 8,
+        "shoes": 6,
+        "bottom": 3,
+        "top": 0
+      },
+      "relationships": [
+        {
+          "target_name": "Robert Hawkins",
+          "relationship_type": "Professional",
+          "relationship_summary": "Grateful to employer who gave him a chance, deeply loyal",
+          "relationship_score": 80
+        },
+        {
+          "target_name": "Sofia Martinez",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Secret love, too shy to confess feelings while she dates Kevin",
+          "relationship_score": 70
+        },
+        {
+          "target_name": "Jake Hawkins",
+          "relationship_type": "Professional",
+          "relationship_summary": "Resented as the 'replacement son' by Robert's actual son",
+          "relationship_score": -10
+        },
+        {
+          "target_name": "Jasmine Foster",
+          "relationship_type": "Friend",
+          "relationship_summary": "Close friend who encourages him to be more assertive",
+          "relationship_score": 75
+        },
+        {
+          "target_name": "Kevin Walsh",
+          "relationship_type": "Rival",
+          "relationship_summary": "Sofia's boyfriend who has threatened him, feels intimidated",
+          "relationship_score": -50
+        },
+        {
+          "target_name": "Carl Henderson",
+          "relationship_type": "Professional",
+          "relationship_summary": "Faces xenophobic comments from him, uncomfortable tension",
+          "relationship_score": -30
+        },
+        {
+          "target_name": "Antonio Martinez",
+          "relationship_type": "Friend",
+          "relationship_summary": "Fellow Mexican immigrant who offers meals and cultural connection",
+          "relationship_score": 70
+        }
+      ],
+      "needs": {
+        "happiness": 50,
+        "energy": 65,
+        "hunger": 55,
+        "hygiene": 60
+      }
+    },
+    {
+      "name": "Helen Park",
+      "age": 52,
+      "race": "Asian",
+      "gender": "Female",
+      "occupation": "Nurse",
+      "background": "Korean-American nurse who was best friends with Robert's late wife. Developed unrequited feelings for Robert after caring for his wife during her illness. Struggles with loneliness and feeling she missed her chance at love.",
+      "personality_traits": [
+        "ambition: low",
+        "confrontational: medium",
+        "sociable: medium",
+        "core_motivation: find companionship and love",
+        "nurturing",
+        "protective",
+        "lonely",
+        "embarrassed"
+      ],
+      "appearance": {
+        "hair": 12,
+        "shoes": 5,
+        "bottom": 0,
+        "top": 2
+      },
+      "relationships": [
+        {
+          "target_name": "Robert Hawkins",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Unrequited love after his wife's death, rejected but can't let go",
+          "relationship_score": 65
+        },
+        {
+          "target_name": "Dr. James Okonkwo",
+          "relationship_type": "Professional",
+          "relationship_summary": "Close colleague who she respects, embarrassed he knows about her feelings",
+          "relationship_score": 60
+        },
+        {
+          "target_name": "Emma Chen",
+          "relationship_type": "Professional",
+          "relationship_summary": "Protective of student volunteer, provides maternal care",
+          "relationship_score": 75
+        },
+        {
+          "target_name": "Diane Chen",
+          "relationship_type": "Professional",
+          "relationship_summary": "Tension from overstepping boundaries with Emma, sees Diane's neglect",
+          "relationship_score": 5
+        },
+        {
+          "target_name": "Tyler Brooks",
+          "relationship_type": "Professional",
+          "relationship_summary": "Mentors young delivery driver like the son she never had",
+          "relationship_score": 70
+        },
+        {
+          "target_name": "Gordon Park",
+          "relationship_type": "Family",
+          "relationship_summary": "Younger brother she supported through addiction, complicated dynamic",
+          "relationship_score": 55
+        }
+      ],
+      "needs": {
+        "happiness": 40,
+        "energy": 60,
+        "hunger": 65,
+        "hygiene": 70
+      }
+    },
+    {
+      "name": "Dorothy Washington",
+      "age": 61,
+      "race": "Black",
+      "gender": "Female",
+      "occupation": "Principal",
+      "background": "First in her family to attend college, has been educator for 35 years. Estranged from adult daughter who blames Dorothy for being a better principal than mother. Channels maternal instincts into students.",
+      "personality_traits": [
+        "ambition: high",
+        "confrontational: high",
+        "sociable: medium",
+        "core_motivation: leave legacy of educational excellence",
+        "strict",
+        "proud",
+        "rigid",
+        "demanding"
+      ],
+      "appearance": {
+        "hair": 2,
+        "shoes": 5,
+        "bottom": 3,
+        "top": 9
+      },
+      "relationships": [
+        {
+          "target_name": "Emma Chen",
+          "relationship_type": "Professional",
+          "relationship_summary": "Mentors gifted student intensely, substitute for lost daughter relationship",
+          "relationship_score": 80
+        },
+        {
+          "target_name": "Marcus Chen",
+          "relationship_type": "Professional",
+          "relationship_summary": "Views him as corrupt politician with misplaced priorities",
+          "relationship_score": -20
+        },
+        {
+          "target_name": "Sarah Mitchell",
+          "relationship_type": "Professional",
+          "relationship_summary": "Clashes over teaching methods, sees her as naive and soft",
+          "relationship_score": 10
+        },
+        {
+          "target_name": "Jake Hawkins",
+          "relationship_type": "Professional",
+          "relationship_summary": "Frustrated student wasting potential on soccer instead of academics",
+          "relationship_score": 15
+        },
+        {
+          "target_name": "Patricia Webb",
+          "relationship_type": "Friend",
+          "relationship_summary": "Respects as intellectual equal, genuine friendship",
+          "relationship_score": 75
+        }
+      ],
+      "needs": {
+        "happiness": 55,
+        "energy": 65,
+        "hunger": 60,
+        "hygiene": 75
+      }
+    },
+    {
+      "name": "Sarah Mitchell",
+      "age": 29,
+      "race": "White",
+      "gender": "Female",
+      "occupation": "Teacher",
+      "background": "Young progressive teacher who believes in emotional intelligence. Dating soccer coach Luis but wants marriage while he focuses on career. Feels undermined by Principal Dorothy and dealing with student Jake's inappropriate crush.",
+      "personality_traits": [
+        "ambition: medium",
+        "confrontational: low",
+        "sociable: high",
+        "core_motivation: make genuine difference in young lives",
+        "idealistic",
+        "compassionate",
+        "frustrated",
+        "questioning"
+      ],
+      "appearance": {
+        "hair": 13,
+        "shoes": 1,
+        "bottom": 2,
+        "top": 4
+      },
+      "relationships": [
+        {
+          "target_name": "Dorothy Washington",
+          "relationship_type": "Professional",
+          "relationship_summary": "Constantly clashes with principal, feels undermined and disrespected",
+          "relationship_score": 15
+        },
+        {
+          "target_name": "Luis Alvarez",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Dating but growing resentful he won't discuss marriage and future",
+          "relationship_score": 50
+        },
+        {
+          "target_name": "Emma Chen",
+          "relationship_type": "Professional",
+          "relationship_summary": "Close with student who confides family problems, maternal connection",
+          "relationship_score": 75
+        },
+        {
+          "target_name": "Diane Chen",
+          "relationship_type": "Professional",
+          "relationship_summary": "Uncomfortable encounters with Emma's mother who feels judged",
+          "relationship_score": 20
+        },
+        {
+          "target_name": "Jake Hawkins",
+          "relationship_type": "Professional",
+          "relationship_summary": "Student with inappropriate crush, increasingly disruptive behavior",
+          "relationship_score": 25
+        },
+        {
+          "target_name": "Maya Patel",
+          "relationship_type": "Friend",
+          "relationship_summary": "Close friend and confidante, though Maya's cynicism sometimes weighs on her",
+          "relationship_score": 70
+        },
+        {
+          "target_name": "Jasmine Foster",
+          "relationship_type": "Friend",
+          "relationship_summary": "Friendly support among younger women in town",
+          "relationship_score": 65
+        }
+      ],
+      "needs": {
+        "happiness": 50,
+        "energy": 55,
+        "hunger": 60,
+        "hygiene": 70
+      }
+    },
+    {
+      "name": "Diane Chen",
+      "age": 40,
+      "race": "White",
+      "gender": "Female",
+      "occupation": "Homemaker",
+      "background": "Married Marcus for financial stability not love, now trapped in loveless marriage. Distant relationship with daughter Emma. Suspects husband's affair but too proud and afraid to leave.",
+      "personality_traits": [
+        "ambition: low",
+        "confrontational: medium",
+        "sociable: medium",
+        "core_motivation: maintain security and social status",
+        "passive-aggressive",
+        "anxious",
+        "critical",
+        "unhappy"
+      ],
+      "appearance": {
+        "hair": 7,
+        "shoes": 0,
+        "bottom": 2,
+        "top": 2
+      },
+      "relationships": [
+        {
+          "target_name": "Marcus Chen",
+          "relationship_type": "Family",
+          "relationship_summary": "Loveless marriage, aware he doesn't care for her, too afraid to leave",
+          "relationship_score": 10
+        },
+        {
+          "target_name": "Emma Chen",
+          "relationship_type": "Family",
+          "relationship_summary": "Cold and distant with daughter, sees her as duty not joy",
+          "relationship_score": 30
+        },
+        {
+          "target_name": "Helen Park",
+          "relationship_type": "Professional",
+          "relationship_summary": "Jealous of her competence, passive-aggressively undermines her",
+          "relationship_score": -10
+        },
+        {
+          "target_name": "Sarah Mitchell",
+          "relationship_type": "Professional",
+          "relationship_summary": "Feels judged by teacher about her parenting",
+          "relationship_score": 15
+        },
+        {
+          "target_name": "Sofia Martinez",
+          "relationship_type": "Friend",
+          "relationship_summary": "Superficial friendship, condescends about education and class",
+          "relationship_score": 25
+        },
+        {
+          "target_name": "Patricia Webb",
+          "relationship_type": "Professional",
+          "relationship_summary": "Avoids her, suspects something but hasn't confirmed affair",
+          "relationship_score": 20
+        }
+      ],
+      "needs": {
+        "happiness": 30,
+        "energy": 50,
+        "hunger": 60,
+        "hygiene": 75
+      }
+    },
+    {
+      "name": "Sofia Martinez",
+      "age": 24,
+      "race": "Hispanic",
+      "gender": "Female",
+      "occupation": "Produce Seller",
+      "background": "Runs produce stand at farmer market, orphaned young and raised by uncle Antonio. Dating possessive Kevin but developing feelings for gentle Miguel. Wants independence and to build successful business.",
+      "personality_traits": [
+        "ambition: medium",
+        "confrontational: medium",
+        "sociable: high",
+        "core_motivation: achieve independence",
+        "vivacious",
+        "business-savvy",
+        "conflicted",
+        "determined"
+      ],
+      "appearance": {
+        "hair": 15,
+        "shoes": 2,
+        "bottom": 1,
+        "top": 6
+      },
+      "relationships": [
+        {
+          "target_name": "Kevin Walsh",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Dating but finding him increasingly suffocating, considering breakup",
+          "relationship_score": 30
+        },
+        {
+          "target_name": "Miguel Rodriguez",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Developing feelings for his gentleness, drawn to him over Kevin",
+          "relationship_score": 60
+        },
+        {
+          "target_name": "Antonio Martinez",
+          "relationship_type": "Family",
+          "relationship_summary": "Uncle and father figure who raised her, resents his overprotectiveness",
+          "relationship_score": 65
+        },
+        {
+          "target_name": "Diane Chen",
+          "relationship_type": "Friend",
+          "relationship_summary": "Superficial friendship, infuriated by subtle classist comments",
+          "relationship_score": 25
+        },
+        {
+          "target_name": "Denise Thompson",
+          "relationship_type": "Friend",
+          "relationship_summary": "Genuine friendship, Denise helps organize market events",
+          "relationship_score": 70
+        },
+        {
+          "target_name": "Maya Patel",
+          "relationship_type": "Friend",
+          "relationship_summary": "Friendship across age difference, sells Maya's art at market",
+          "relationship_score": 65
+        },
+        {
+          "target_name": "Joseph Martinez",
+          "relationship_type": "Family",
+          "relationship_summary": "Grandfather who pushes her away with harsh criticism despite her care",
+          "relationship_score": 40
+        }
+      ],
+      "needs": {
+        "happiness": 55,
+        "energy": 70,
+        "hunger": 60,
+        "hygiene": 70
+      }
+    },
+    {
+      "name": "Patricia Webb",
+      "age": 45,
+      "race": "White",
+      "gender": "Female",
+      "occupation": "Librarian",
+      "background": "Runs town library with quiet efficiency. Having secret affair with married Mayor Marcus who promises to leave his wife but never does. Deeply ashamed but desperate for love after years of loneliness.",
+      "personality_traits": [
+        "ambition: medium",
+        "confrontational: low",
+        "sociable: medium",
+        "core_motivation: find passionate love and connection",
+        "intelligent",
+        "romantic",
+        "compromised",
+        "guilty"
+      ],
+      "appearance": {
+        "hair": 12,
+        "shoes": 5,
+        "bottom": 3,
+        "top": 3
+      },
+      "relationships": [
+        {
+          "target_name": "Marcus Chen",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Secret affair, desperately wants to believe his promises, knows she's being used",
+          "relationship_score": 50
+        },
+        {
+          "target_name": "Diane Chen",
+          "relationship_type": "Professional",
+          "relationship_summary": "Avoids due to guilt over affair with her husband",
+          "relationship_score": -5
+        },
+        {
+          "target_name": "Jasmine Foster",
+          "relationship_type": "Professional",
+          "relationship_summary": "Mentors assistant but has been distant lately due to affair secret",
+          "relationship_score": 60
+        },
+        {
+          "target_name": "Dorothy Washington",
+          "relationship_type": "Friend",
+          "relationship_summary": "Intellectual friendship, dreads Dorothy discovering affair",
+          "relationship_score": 70
+        },
+        {
+          "target_name": "Ethan Foster",
+          "relationship_type": "Professional",
+          "relationship_summary": "Aware of his crush, finds it flattering but inconvenient",
+          "relationship_score": 30
+        },
+        {
+          "target_name": "Emma Chen",
+          "relationship_type": "Professional",
+          "relationship_summary": "Helps student who uses library as refuge, feels guilty about affair with her father",
+          "relationship_score": 55
+        },
+        {
+          "target_name": "Maya Patel",
+          "relationship_type": "Friend",
+          "relationship_summary": "Appreciates artistic perspective, though distracted by affair lately",
+          "relationship_score": 60
+        }
+      ],
+      "needs": {
+        "happiness": 45,
+        "energy": 55,
+        "hunger": 60,
+        "hygiene": 70
+      }
+    },
+    {
+      "name": "Luis Alvarez",
+      "age": 32,
+      "race": "Hispanic",
+      "gender": "Male",
+      "occupation": "Soccer Coach",
+      "background": "Passionate soccer coach building championship program. Dating Sarah but wants career advancement over marriage. Heavily invested in star player Jake's success, creating conflict with Jake's father Robert.",
+      "personality_traits": [
+        "ambition: high",
+        "confrontational: medium",
+        "sociable: high",
+        "core_motivation: build championship program and advance career",
+        "charismatic",
+        "driven",
+        "emotionally avoidant",
+        "competitive"
+      ],
+      "appearance": {
+        "hair": 8,
+        "shoes": 1,
+        "bottom": 1,
+        "top": 0
+      },
+      "relationships": [
+        {
+          "target_name": "Sarah Mitchell",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Dating but avoiding discussion of marriage and future, wants different things",
+          "relationship_score": 55
+        },
+        {
+          "target_name": "Jake Hawkins",
+          "relationship_type": "Professional",
+          "relationship_summary": "Star player with real potential, heavily invested in his success",
+          "relationship_score": 75
+        },
+        {
+          "target_name": "Robert Hawkins",
+          "relationship_type": "Rival",
+          "relationship_summary": "Conflict over Jake's future, willing to encourage defiance of father",
+          "relationship_score": -35
+        },
+        {
+          "target_name": "Kevin Walsh",
+          "relationship_type": "Professional",
+          "relationship_summary": "Competitive rivalry for alpha status, unspoken tension",
+          "relationship_score": 20
+        },
+        {
+          "target_name": "Dr. James Okonkwo",
+          "relationship_type": "Professional",
+          "relationship_summary": "Admires doctor who treats sports injuries, too proud to show vulnerability",
+          "relationship_score": 60
+        },
+        {
+          "target_name": "Tyler Brooks",
+          "relationship_type": "Professional",
+          "relationship_summary": "Seen as role model by young delivery driver",
+          "relationship_score": 55
+        }
+      ],
+      "needs": {
+        "happiness": 65,
+        "energy": 70,
+        "hunger": 60,
+        "hygiene": 70
+      }
+    },
+    {
+      "name": "Dr. James Okonkwo",
+      "age": 48,
+      "race": "Black",
+      "gender": "Male",
+      "occupation": "Doctor",
+      "background": "Nigerian-American widower who relocated to Willow Creek after wife died in car accident five years ago. Town's primary physician who knows everyone's secrets. Slowly developing feelings for artist Maya but hesitant to pursue.",
+      "personality_traits": [
+        "ambition: medium",
+        "confrontational: low",
+        "sociable: medium",
+        "core_motivation: healing and maintaining peace",
+        "wise",
+        "compassionate",
+        "lonely",
+        "cautious"
+      ],
+      "appearance": {
+        "hair": 3,
+        "shoes": 5,
+        "bottom": 0,
+        "top": 9
+      },
+      "relationships": [
+        {
+          "target_name": "Helen Park",
+          "relationship_type": "Professional",
+          "relationship_summary": "Deep respect for nurse colleague, sympathetic about her situation",
+          "relationship_score": 75
+        },
+        {
+          "target_name": "Maya Patel",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Slowly developed feelings, drawn to her depth, hesitant about age and rejection",
+          "relationship_score": 65
+        },
+        {
+          "target_name": "Tyler Brooks",
+          "relationship_type": "Professional",
+          "relationship_summary": "Mentors young man whose father died similarly to his wife, special bond",
+          "relationship_score": 70
+        },
+        {
+          "target_name": "Marcus Chen",
+          "relationship_type": "Professional",
+          "relationship_summary": "Treats his stress-related health issues, knows his secrets",
+          "relationship_score": 40
+        },
+        {
+          "target_name": "Robert Hawkins",
+          "relationship_type": "Professional",
+          "relationship_summary": "Tries to mediate feud, resented as interfering voice of reason",
+          "relationship_score": 50
+        },
+        {
+          "target_name": "Kevin Walsh",
+          "relationship_type": "Professional",
+          "relationship_summary": "Treated for anger management issues after fight, concerned",
+          "relationship_score": 35
+        },
+        {
+          "target_name": "Joseph Martinez",
+          "relationship_type": "Professional",
+          "relationship_summary": "Treats veteran's health issues, one of few Joseph will listen to",
+          "relationship_score": 60
+        }
+      ],
+      "needs": {
+        "happiness": 50,
+        "energy": 60,
+        "hunger": 65,
+        "hygiene": 75
+      }
+    },
+    {
+      "name": "Denise Thompson",
+      "age": 55,
+      "race": "Black",
+      "gender": "Female",
+      "occupation": "Park Ranger",
+      "background": "Manages park and community events, town's unofficial peacekeeper and gossip hub. Knows about Marcus and Patricia's affair. Developing slow-burning romance with chef Antonio.",
+      "personality_traits": [
+        "ambition: low",
+        "confrontational: medium",
+        "sociable: high",
+        "core_motivation: community harmony and environmental preservation",
+        "warm",
+        "observant",
+        "protective",
+        "burdened by knowledge"
+      ],
+      "appearance": {
+        "hair": 1,
+        "shoes": 4,
+        "bottom": 3,
+        "top": 5
+      },
+      "relationships": [
+        {
+          "target_name": "Marcus Chen",
+          "relationship_type": "Professional",
+          "relationship_summary": "Knows about his affair, wrestling with whether to tell Diane",
+          "relationship_score": 20
+        },
+        {
+          "target_name": "Patricia Webb",
+          "relationship_type": "Professional",
+          "relationship_summary": "Aware of affair with Marcus, complicated feelings about the situation",
+          "relationship_score": 35
+        },
+        {
+          "target_name": "Helen Park",
+          "relationship_type": "Friend",
+          "relationship_summary": "Close friend who knows about unrequited feelings for Robert, offers support",
+          "relationship_score": 75
+        },
+        {
+          "target_name": "Sofia Martinez",
+          "relationship_type": "Friend",
+          "relationship_summary": "Protective of Sofia, concerned about Kevin's temper, genuine friendship",
+          "relationship_score": 70
+        },
+        {
+          "target_name": "Kevin Walsh",
+          "relationship_type": "Professional",
+          "relationship_summary": "Distrusts his temper, keeps eye on him at park",
+          "relationship_score": 10
+        },
+        {
+          "target_name": "Antonio Martinez",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Slow-burning romance developing, carefully exploring possibilities",
+          "relationship_score": 65
+        },
+        {
+          "target_name": "Joseph Martinez",
+          "relationship_type": "Professional",
+          "relationship_summary": "Tries to draw isolated veteran into community, he resists seeing it as pity",
+          "relationship_score": 45
+        },
+        {
+          "target_name": "Ethan Foster",
+          "relationship_type": "Professional",
+          "relationship_summary": "Polite interactions at community events",
+          "relationship_score": 50
+        }
+      ],
+      "needs": {
+        "happiness": 65,
+        "energy": 65,
+        "hunger": 60,
+        "hygiene": 70
+      }
+    },
+    {
+      "name": "Jake Hawkins",
+      "age": 17,
+      "race": "White",
+      "gender": "Male",
+      "occupation": "Student",
+      "background": "Robert's son and star soccer player desperate to escape farm life. Intense conflict with father who wants him to take over farm. Has inappropriate crush on teacher Sarah and resents farmhand Miguel.",
+      "personality_traits": [
+        "ambition: high",
+        "confrontational: high",
+        "sociable: medium",
+        "core_motivation: escape town and become professional soccer player",
+        "angry",
+        "talented",
+        "desperate",
+        "rebellious"
+      ],
+      "appearance": {
+        "hair": 10,
+        "shoes": 1,
+        "bottom": 1,
+        "top": 0
+      },
+      "relationships": [
+        {
+          "target_name": "Robert Hawkins",
+          "relationship_type": "Family",
+          "relationship_summary": "Explosive conflict with father, sees him as trying to trap him in dead-end life",
+          "relationship_score": -10
+        },
+        {
+          "target_name": "Luis Alvarez",
+          "relationship_type": "Professional",
+          "relationship_summary": "Idolizes coach who supports his dreams, trusts more than father",
+          "relationship_score": 85
+        },
+        {
+          "target_name": "Sarah Mitchell",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Inappropriate crush on teacher, increasingly disruptive behavior",
+          "relationship_score": 60
+        },
+        {
+          "target_name": "Miguel Rodriguez",
+          "relationship_type": "Rival",
+          "relationship_summary": "Resents as replacement son getting father's approval",
+          "relationship_score": -25
+        },
+        {
+          "target_name": "Dorothy Washington",
+          "relationship_type": "Professional",
+          "relationship_summary": "Frustrated with principal pushing academics over soccer",
+          "relationship_score": 5
+        },
+        {
+          "target_name": "Emma Chen",
+          "relationship_type": "Friend",
+          "relationship_summary": "Friends bonding over difficult families, wishes for more but she sees him platonically",
+          "relationship_score": 55
+        },
+        {
+          "target_name": "Tyler Brooks",
+          "relationship_type": "Friend",
+          "relationship_summary": "Close in age friends, though Jake finds Tyler's grief painful to watch",
+          "relationship_score": 50
+        }
+      ],
+      "needs": {
+        "happiness": 40,
+        "energy": 75,
+        "hunger": 60,
+        "hygiene": 55
+      }
+    },
+    {
+      "name": "Emma Chen",
+      "age": 15,
+      "race": "Asian",
+      "gender": "Female",
+      "occupation": "Student",
+      "background": "Marcus and Diane's daughter, academically gifted people-pleaser desperately seeking parental love through achievement. Mentored by Dorothy, confides in Sarah, volunteers at hospital with Helen.",
+      "personality_traits": [
+        "ambition: high",
+        "confrontational: low",
+        "sociable: medium",
+        "core_motivation: achieve excellence to win parents' love",
+        "brilliant",
+        "anxious",
+        "people-pleaser",
+        "cracking under pressure"
+      ],
+      "appearance": {
+        "hair": 14,
+        "shoes": 5,
+        "bottom": 2,
+        "top": 4
+      },
+      "relationships": [
+        {
+          "target_name": "Marcus Chen",
+          "relationship_type": "Family",
+          "relationship_summary": "Emotionally distant father who only notices achievements not emotions",
+          "relationship_score": 25
+        },
+        {
+          "target_name": "Diane Chen",
+          "relationship_type": "Family",
+          "relationship_summary": "Cold distant mother who sees her as duty, painful lack of warmth",
+          "relationship_score": 30
+        },
+        {
+          "target_name": "Dorothy Washington",
+          "relationship_type": "Professional",
+          "relationship_summary": "Mentored intensely, craves her approval as substitute for parental love",
+          "relationship_score": 75
+        },
+        {
+          "target_name": "Sarah Mitchell",
+          "relationship_type": "Professional",
+          "relationship_summary": "Confides family problems, finds more maternal care than from own mother",
+          "relationship_score": 80
+        },
+        {
+          "target_name": "Helen Park",
+          "relationship_type": "Professional",
+          "relationship_summary": "Volunteers at hospital, receives genuine warmth and maternal attention",
+          "relationship_score": 80
+        },
+        {
+          "target_name": "Jake Hawkins",
+          "relationship_type": "Friend",
+          "relationship_summary": "Friends bonding over family drama, oblivious to his romantic feelings",
+          "relationship_score": 60
+        },
+        {
+          "target_name": "Patricia Webb",
+          "relationship_type": "Professional",
+          "relationship_summary": "Finds library a refuge, helped by librarian, unaware of affair with father",
+          "relationship_score": 65
+        },
+        {
+          "target_name": "Jasmine Foster",
+          "relationship_type": "Professional",
+          "relationship_summary": "Library assistant as older sister figure and role model",
+          "relationship_score": 70
+        },
+        {
+          "target_name": "Maya Patel",
+          "relationship_type": "Professional",
+          "relationship_summary": "Informally mentored in art, creative outlet from academic pressure",
+          "relationship_score": 70
+        }
+      ],
+      "needs": {
+        "happiness": 35,
+        "energy": 50,
+        "hunger": 60,
+        "hygiene": 75
+      }
+    },
+    {
+      "name": "Jasmine Foster",
+      "age": 22,
+      "race": "Black",
+      "gender": "Female",
+      "occupation": "Library Assistant",
+      "background": "Young library assistant finding her way after community college. Best friends with Miguel, casually dating Tyler. Mentor Patricia has become distant lately which hurts her.",
+      "personality_traits": [
+        "ambition: medium",
+        "confrontational: medium",
+        "sociable: high",
+        "core_motivation: build genuine connections and find her path",
+        "warm",
+        "loyal",
+        "socially conscious",
+        "feeling stuck"
+      ],
+      "appearance": {
+        "hair": 0,
+        "shoes": 1,
+        "bottom": 3,
+        "top": 6
+      },
+      "relationships": [
+        {
+          "target_name": "Patricia Webb",
+          "relationship_type": "Professional",
+          "relationship_summary": "Close with mentor but hurt by recent distance and secrets",
+          "relationship_score": 55
+        },
+        {
+          "target_name": "Miguel Rodriguez",
+          "relationship_type": "Friend",
+          "relationship_summary": "Best friends bonding as young people finding their place, encourages him constantly",
+          "relationship_score": 80
+        },
+        {
+          "target_name": "Tyler Brooks",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Casually dating, not serious yet, both figuring out what they want",
+          "relationship_score": 55
+        },
+        {
+          "target_name": "Emma Chen",
+          "relationship_type": "Professional",
+          "relationship_summary": "Older sister figure to student who practically lives at library",
+          "relationship_score": 70
+        },
+        {
+          "target_name": "Sarah Mitchell",
+          "relationship_type": "Friend",
+          "relationship_summary": "Friendly support among younger women in town",
+          "relationship_score": 65
+        },
+        {
+          "target_name": "Maya Patel",
+          "relationship_type": "Friend",
+          "relationship_summary": "Loose support group of younger women",
+          "relationship_score": 60
+        },
+        {
+          "target_name": "Carl Henderson",
+          "relationship_type": "Professional",
+          "relationship_summary": "Made racist comment she hasn't forgiven, avoids pool",
+          "relationship_score": -40
+        },
+        {
+          "target_name": "Kevin Walsh",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Brief thing before Sofia that ended badly when she called out controlling behavior",
+          "relationship_score": -15
+        },
+        {
+          "target_name": "Ethan Foster",
+          "relationship_type": "Professional",
+          "relationship_summary": "He confides about feelings for Patricia, puts her in uncomfortable position",
+          "relationship_score": 40
+        }
+      ],
+      "needs": {
+        "happiness": 55,
+        "energy": 65,
+        "hunger": 60,
+        "hygiene": 70
+      }
+    },
+    {
+      "name": "Kevin Walsh",
+      "age": 26,
+      "race": "White",
+      "gender": "Male",
+      "occupation": "Lifeguard",
+      "background": "Physically imposing lifeguard with anger management issues. Dating Sofia but increasingly possessive and jealous. Has threatened Miguel over Sofia, has anger issues treated by Dr. James.",
+      "personality_traits": [
+        "ambition: low",
+        "confrontational: high",
+        "sociable: medium",
+        "core_motivation: maintain control and dominance",
+        "possessive",
+        "jealous",
+        "charming surface",
+        "potentially dangerous"
+      ],
+      "appearance": {
+        "hair": 3,
+        "shoes": 2,
+        "bottom": 1,
+        "top": 0
+      },
+      "relationships": [
+        {
+          "target_name": "Sofia Martinez",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Dating but increasingly possessive, senses her pulling away",
+          "relationship_score": 45
+        },
+        {
+          "target_name": "Miguel Rodriguez",
+          "relationship_type": "Rival",
+          "relationship_summary": "Noticed his feelings for Sofia, confronted with threats, establishing territory",
+          "relationship_score": -60
+        },
+        {
+          "target_name": "Luis Alvarez",
+          "relationship_type": "Professional",
+          "relationship_summary": "Competitive alpha-male dynamic, tension when together",
+          "relationship_score": 15
+        },
+        {
+          "target_name": "Dr. James Okonkwo",
+          "relationship_type": "Professional",
+          "relationship_summary": "Treated for anger management after bar fight, uncomfortable dynamic",
+          "relationship_score": 30
+        },
+        {
+          "target_name": "Carl Henderson",
+          "relationship_type": "Professional",
+          "relationship_summary": "Technically supervised by Carl but intimidates him, Carl avoids managing him",
+          "relationship_score": 25
+        },
+        {
+          "target_name": "Denise Thompson",
+          "relationship_type": "Professional",
+          "relationship_summary": "She keeps eye on his temper at park, distrusts him",
+          "relationship_score": 15
+        },
+        {
+          "target_name": "Jasmine Foster",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Brief thing that ended badly, awkwardness between them",
+          "relationship_score": -10
+        },
+        {
+          "target_name": "Tyler Brooks",
+          "relationship_type": "Professional",
+          "relationship_summary": "Dismissive of younger delivery driver, sees him as weak",
+          "relationship_score": 10
+        }
+      ],
+      "needs": {
+        "happiness": 50,
+        "energy": 75,
+        "hunger": 60,
+        "hygiene": 60
+      }
+    },
+    {
+      "name": "Carl Henderson",
+      "age": 63,
+      "race": "White",
+      "gender": "Male",
+      "occupation": "Pool Attendant",
+      "background": "Lazy pool attendant nearing retirement who does bare minimum. Has old-fashioned borderline bigoted views, made racist comment to Jasmine and xenophobic remarks about Miguel.",
+      "personality_traits": [
+        "ambition: low",
+        "confrontational: medium",
+        "sociable: low",
+        "core_motivation: coast to retirement maintaining status quo",
+        "lazy",
+        "passive-aggressive",
+        "casually prejudiced",
+        "avoidant"
+      ],
+      "appearance": {
+        "hair": 3,
+        "shoes": 4,
+        "bottom": 1,
+        "top": 5
+      },
+      "relationships": [
+        {
+          "target_name": "Denise Thompson",
+          "relationship_type": "Professional",
+          "relationship_summary": "Supervised by ranger, frustrates her with laziness and minimal work",
+          "relationship_score": 20
+        },
+        {
+          "target_name": "Kevin Walsh",
+          "relationship_type": "Professional",
+          "relationship_summary": "Supposed to supervise lifeguard but intimidated, avoids managing him",
+          "relationship_score": 30
+        },
+        {
+          "target_name": "Jasmine Foster",
+          "relationship_type": "Professional",
+          "relationship_summary": "Made racist comment that damaged relationship permanently",
+          "relationship_score": -35
+        },
+        {
+          "target_name": "Miguel Rodriguez",
+          "relationship_type": "Professional",
+          "relationship_summary": "Makes xenophobic remarks, calls him illegal despite knowing nothing about status",
+          "relationship_score": -30
+        },
+        {
+          "target_name": "Robert Hawkins",
+          "relationship_type": "Friend",
+          "relationship_summary": "Old friend from youth, sides with Robert against Marcus",
+          "relationship_score": 60
+        },
+        {
+          "target_name": "Joseph Martinez",
+          "relationship_type": "Friend",
+          "relationship_summary": "Friendly with isolated veteran, closer in age",
+          "relationship_score": 55
+        },
+        {
+          "target_name": "Gordon Park",
+          "relationship_type": "Professional",
+          "relationship_summary": "Handyman has to fix things Carl neglects or breaks, contentious",
+          "relationship_score": 25
+        }
+      ],
+      "needs": {
+        "happiness": 50,
+        "energy": 45,
+        "hunger": 65,
+        "hygiene": 50
+      }
+    },
+    {
+      "name": "Antonio Martinez",
+      "age": 58,
+      "race": "Hispanic",
+      "gender": "Male",
+      "occupation": "Chef",
+      "background": "Passionate chef who runs catering operation and raised orphaned niece Sofia. Distrusts Sofia's boyfriend Kevin intensely. Developing slow-burning romance with park ranger Denise.",
+      "personality_traits": [
+        "ambition: medium",
+        "confrontational: low",
+        "sociable: medium",
+        "core_motivation: preserve culinary traditions and support family",
+        "warm",
+        "traditional",
+        "family-oriented",
+        "protective"
+      ],
+      "appearance": {
+        "hair": 8,
+        "shoes": 4,
+        "bottom": 0,
+        "top": 1
+      },
+      "relationships": [
+        {
+          "target_name": "Sofia Martinez",
+          "relationship_type": "Family",
+          "relationship_summary": "Raised niece as father figure, worried about Kevin but she resents overprotectiveness",
+          "relationship_score": 70
+        },
+        {
+          "target_name": "Kevin Walsh",
+          "relationship_type": "Professional",
+          "relationship_summary": "Distrusts intensely, sees controlling behavior, warned Sofia",
+          "relationship_score": -25
+        },
+        {
+          "target_name": "Miguel Rodriguez",
+          "relationship_type": "Friend",
+          "relationship_summary": "Offers meals and advice to fellow immigrant, cultural connection",
+          "relationship_score": 75
+        },
+        {
+          "target_name": "Denise Thompson",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Slow-burning gentle romance developing, both exploring possibilities carefully",
+          "relationship_score": 65
+        },
+        {
+          "target_name": "Robert Hawkins",
+          "relationship_type": "Professional",
+          "relationship_summary": "Supplies him with meat and dairy, friendly business relationship",
+          "relationship_score": 65
+        },
+        {
+          "target_name": "Marcus Chen",
+          "relationship_type": "Professional",
+          "relationship_summary": "Awkwardly caught between Robert-Marcus feud, needs relationships with both",
+          "relationship_score": 40
+        },
+        {
+          "target_name": "Patricia Webb",
+          "relationship_type": "Professional",
+          "relationship_summary": "Catered events where he's seen Marcus and Patricia together, suspects affair",
+          "relationship_score": 45
+        },
+        {
+          "target_name": "Tyler Brooks",
+          "relationship_type": "Professional",
+          "relationship_summary": "Gave free meals after Tyler's father died, kindhearted support",
+          "relationship_score": 65
+        },
+        {
+          "target_name": "Joseph Martinez",
+          "relationship_type": "Family",
+          "relationship_summary": "Tries to connect with difficult father who only remembers childhood mistakes",
+          "relationship_score": 45
+        }
+      ],
+      "needs": {
+        "happiness": 60,
+        "energy": 60,
+        "hunger": 55,
+        "hygiene": 70
+      }
+    },
+    {
+      "name": "Maya Patel",
+      "age": 34,
+      "race": "Asian",
+      "gender": "Female",
+      "occupation": "Artist",
+      "background": "Painter and sculptor who moved to Willow Creek three years ago after painful divorce. Still isolated and aching from loneliness. Aware Dr. James is interested but terrified of being hurt again.",
+      "personality_traits": [
+        "ambition: medium",
+        "confrontational: low",
+        "sociable: low",
+        "core_motivation: artistic expression and authentic connection",
+        "contemplative",
+        "cynical",
+        "emotionally guarded",
+        "depressed"
+      ],
+      "appearance": {
+        "hair": 6,
+        "shoes": 2,
+        "bottom": 3,
+        "top": 2
+      },
+      "relationships": [
+        {
+          "target_name": "Sarah Mitchell",
+          "relationship_type": "Friend",
+          "relationship_summary": "Close friend who welcomed her, though Maya's cynicism exhausts Sarah",
+          "relationship_score": 70
+        },
+        {
+          "target_name": "Dr. James Okonkwo",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Deeply attracted but terrified of being hurt, pretends not to notice his interest",
+          "relationship_score": 60
+        },
+        {
+          "target_name": "Patricia Webb",
+          "relationship_type": "Friend",
+          "relationship_summary": "Friendly, Patricia appreciates artistic perspective, Maya senses trouble lately",
+          "relationship_score": 60
+        },
+        {
+          "target_name": "Sofia Martinez",
+          "relationship_type": "Friend",
+          "relationship_summary": "Friendship across age difference, Sofia sells her art at market",
+          "relationship_score": 65
+        },
+        {
+          "target_name": "Emma Chen",
+          "relationship_type": "Professional",
+          "relationship_summary": "Informally mentors student in art, provides creative outlet",
+          "relationship_score": 70
+        },
+        {
+          "target_name": "Jasmine Foster",
+          "relationship_type": "Friend",
+          "relationship_summary": "Loose support group of younger women in town",
+          "relationship_score": 60
+        }
+      ],
+      "needs": {
+        "happiness": 40,
+        "energy": 50,
+        "hunger": 55,
+        "hygiene": 65
+      }
+    },
+    {
+      "name": "Tyler Brooks",
+      "age": 19,
+      "race": "White",
+      "gender": "Male",
+      "occupation": "Delivery Driver",
+      "background": "Young delivery driver whose father died in work accident when he was 16. Mentored by Helen and Dr. James who encourage medical training. Casually dating Jasmine.",
+      "personality_traits": [
+        "ambition: medium",
+        "confrontational: low",
+        "sociable: high",
+        "core_motivation: prove himself as adult after trauma",
+        "earnest",
+        "hardworking",
+        "grieving",
+        "figuring out life"
+      ],
+      "appearance": {
+        "hair": 10,
+        "shoes": 1,
+        "bottom": 3,
+        "top": 8
+      },
+      "relationships": [
+        {
+          "target_name": "Helen Park",
+          "relationship_type": "Professional",
+          "relationship_summary": "Mentored by nurse, she sees him as son she never had",
+          "relationship_score": 75
+        },
+        {
+          "target_name": "Dr. James Okonkwo",
+          "relationship_type": "Professional",
+          "relationship_summary": "Mentored by doctor, special bond over similar loss of loved ones",
+          "relationship_score": 75
+        },
+        {
+          "target_name": "Jasmine Foster",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Casually dating, enjoying company but not ready for serious commitment",
+          "relationship_score": 60
+        },
+        {
+          "target_name": "Jake Hawkins",
+          "relationship_type": "Friend",
+          "relationship_summary": "Close in age friends, though Jake's rebellion against father painful to watch",
+          "relationship_score": 55
+        },
+        {
+          "target_name": "Luis Alvarez",
+          "relationship_type": "Professional",
+          "relationship_summary": "Looks up to coach as role model of young male success",
+          "relationship_score": 65
+        },
+        {
+          "target_name": "Kevin Walsh",
+          "relationship_type": "Professional",
+          "relationship_summary": "Kevin dismissive of him as kid, Tyler resents the treatment",
+          "relationship_score": 5
+        },
+        {
+          "target_name": "Antonio Martinez",
+          "relationship_type": "Professional",
+          "relationship_summary": "Grateful for free meals after father died when money tight",
+          "relationship_score": 70
+        }
+      ],
+      "needs": {
+        "happiness": 55,
+        "energy": 70,
+        "hunger": 60,
+        "hygiene": 65
+      }
+    },
+    {
+      "name": "Ethan Foster",
+      "age": 38,
+      "race": "White",
+      "gender": "Male",
+      "occupation": "Remote Worker",
+      "background": "Remote tech worker who moved to Willow Creek six months ago after city burnout. Has obvious crush on librarian Patricia who is emotionally unavailable. Socially awkward struggling to find belonging.",
+      "personality_traits": [
+        "ambition: medium",
+        "confrontational: low",
+        "sociable: low",
+        "core_motivation: find belonging and romantic connection",
+        "intelligent",
+        "well-meaning",
+        "lonely",
+        "socially awkward"
+      ],
+      "appearance": {
+        "hair": 11,
+        "shoes": 5,
+        "bottom": 3,
+        "top": 3
+      },
+      "relationships": [
+        {
+          "target_name": "Patricia Webb",
+          "relationship_type": "Romantic",
+          "relationship_summary": "Obvious crush, constantly at library trying to connect, she's emotionally unavailable",
+          "relationship_score": 65
+        },
+        {
+          "target_name": "Jasmine Foster",
+          "relationship_type": "Friend",
+          "relationship_summary": "Confides about feelings for Patricia, puts Jasmine in uncomfortable position",
+          "relationship_score": 50
+        },
+        {
+          "target_name": "Gordon Park",
+          "relationship_type": "Professional",
+          "relationship_summary": "Handyman helps with house repairs, gets along okay",
+          "relationship_score": 55
+        },
+        {
+          "target_name": "Denise Thompson",
+          "relationship_type": "Professional",
+          "relationship_summary": "Polite interactions at community events",
+          "relationship_score": 50
+        }
+      ],
+      "needs": {
+        "happiness": 45,
+        "energy": 60,
+        "hunger": 65,
+        "hygiene": 70
+      }
+    },
+    {
+      "name": "Gordon Park",
+      "age": 51,
+      "race": "Asian",
+      "gender": "Male",
+      "occupation": "Handyman",
+      "background": "Town handyman and recovering alcoholic (five years sober). Helen's younger brother who feels grateful but ashamed of debt he can never repay. Moved to Willow Creek for fresh start.",
+      "personality_traits": [
+        "ambition: low",
+        "confrontational: low",
+        "sociable: low",
+        "core_motivation: maintain sobriety and steady honest work",
+        "quiet",
+        "observant",
+        "humble",
+        "fighting demons"
+      ],
+      "appearance": {
+        "hair": 3,
+        "shoes": 6,
+        "bottom": 3,
+        "top": 5
+      },
+      "relationships": [
+        {
+          "target_name": "Helen Park",
+          "relationship_type": "Family",
+          "relationship_summary": "Sister who supported him through addiction, feels grateful and ashamed, tension despite love",
+          "relationship_score": 55
+        },
+        {
+          "target_name": "Robert Hawkins",
+          "relationship_type": "Professional",
+          "relationship_summary": "Repairs farm equipment, heard Robert's grief during work",
+          "relationship_score": 60
+        },
+        {
+          "target_name": "Dorothy Washington",
+          "relationship_type": "Professional",
+          "relationship_summary": "Fixed things at school, witnessed tension between Dorothy and Sarah",
+          "relationship_score": 50
+        },
+        {
+          "target_name": "Marcus Chen",
+          "relationship_type": "Professional",
+          "relationship_summary": "Maintains his house, senses cold marriage",
+          "relationship_score": 45
+        },
+        {
+          "target_name": "Antonio Martinez",
+          "relationship_type": "Friend",
+          "relationship_summary": "Chef often feeds him, one of few who doesn't judge or pry",
+          "relationship_score": 75
+        },
+        {
+          "target_name": "Carl Henderson",
+          "relationship_type": "Professional",
+          "relationship_summary": "Regularly fixes Carl's negligent damage, frustrating but stays professional",
+          "relationship_score": 30
+        },
+        {
+          "target_name": "Ethan Foster",
+          "relationship_type": "Professional",
+          "relationship_summary": "Helps with house repairs, finds Ethan's awkwardness endearing",
+          "relationship_score": 60
+        }
+      ],
+      "needs": {
+        "happiness": 50,
+        "energy": 60,
+        "hunger": 60,
+        "hygiene": 65
+      }
+    },
+    {
+      "name": "Joseph Martinez",
+      "age": 68,
+      "race": "Hispanic",
+      "gender": "Male",
+      "occupation": "Retired",
+      "background": "Retired Army veteran with PTSD who lives alone at park. Sofia's grandfather and Antonio's father with strained family relationships. Lost wife ten years ago and never recovered, sinking into isolation.",
+      "personality_traits": [
+        "ambition: low",
+        "confrontational: medium",
+        "sociable: low",
+        "core_motivation: find peace and purpose after lifetime of service",
+        "proud",
+        "damaged",
+        "isolated",
+        "terrified of being burden"
+      ],
+      "appearance": {
+        "hair": 3,
+        "shoes": 4,
+        "bottom": 0,
+        "top": 1
+      },
+      "relationships": [
+        {
+          "target_name": "Sofia Martinez",
+          "relationship_type": "Family",
+          "relationship_summary": "Granddaughter who tries to care for him but he pushes away with harsh criticism",
+          "relationship_score": 40
+        },
+        {
+          "target_name": "Antonio Martinez",
+          "relationship_type": "Family",
+          "relationship_summary": "Son who tries to connect but Joseph only remembers his childhood mistakes",
+          "relationship_score": 35
+        },
+        {
+          "target_name": "Denise Thompson",
+          "relationship_type": "Professional",
+          "relationship_summary": "Park ranger tries to draw him into community, he resists seeing it as pity",
+          "relationship_score": 40
+        },
+        {
+          "target_name": "Carl Henderson",
+          "relationship_type": "Friend",
+          "relationship_summary": "One of few friendly relationships, closer in age, neither fits with younger energy",
+          "relationship_score": 55
+        },
+        {
+          "target_name": "Dr. James Okonkwo",
+          "relationship_type": "Professional",
+          "relationship_summary": "Treats his health issues, one of few people Joseph will actually listen to",
+          "relationship_score": 60
+        },
+        {
+          "target_name": "Robert Hawkins",
+          "relationship_type": "Professional",
+          "relationship_summary": "Sides with Robert in feud, sees Marcus as politician type who sends young men to war",
+          "relationship_score": 55
+        }
+      ],
+      "needs": {
+        "happiness": 30,
+        "energy": 40,
+        "hunger": 50,
+        "hygiene": 45
+      }
+    }
+  ]
+}
