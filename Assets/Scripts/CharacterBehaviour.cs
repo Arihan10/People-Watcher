@@ -614,7 +614,7 @@ public class CharacterBehaviour : MonoBehaviour
     void Start() {
         
         //Say("HELLO! I am an alien", 3);
-        //Kiss(testObj.name, true);
+        Kiss(testObj.name, true);
         
     }
 }
