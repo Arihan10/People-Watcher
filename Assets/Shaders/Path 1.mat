@@ -38,14 +38,14 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Mess: 500
-    - _Multiplier: 0.05
+    - _Mess: 300
+    - _Multiplier: 0.15
     - _QueueControl: 0
     - _QueueOffset: 0
     - _Tiling: 20
     m_Colors:
     - _Color: {r: 0.78823537, g: 0.72156864, b: 0.30588236, a: 1}
-    - _MessColor: {r: 0.3056603, g: 0.29370654, b: 0.2070416, a: 1}
+    - _MessColor: {r: 0.3773585, g: 0.36410743, b: 0.25809896, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
 --- !u!114 &1003140667125059033
