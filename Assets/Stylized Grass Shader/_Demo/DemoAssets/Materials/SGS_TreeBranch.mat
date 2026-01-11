@@ -22,6 +22,8 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: SGS_TreeBranch
   m_Shader: {fileID: 4800000, guid: d7dd1c3f4cba1d441a7d295a168bac0d, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - _FADING
   - _SIMPLE_LIGHTING
@@ -32,6 +34,7 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -189,7 +192,7 @@ Material:
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 0.93372107, g: 1, b: 0, a: 1}
+    - _BaseColor: {r: 0.50524676, g: 1, b: 0, a: 1}
     - _BaseColorAddSubDiff: {r: 0, g: 0, b: 0, a: 0}
     - _BendTint: {r: 0.8, g: 0.8, b: 0.8, a: 1}
     - _CameraFadeParams: {r: 0, g: 0, b: 0, a: 0}
@@ -209,3 +212,4 @@ Material:
     - _SubsurfaceColor: {r: 1, g: 1, b: 1, a: 1}
     - _WindDirection: {r: 1, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1

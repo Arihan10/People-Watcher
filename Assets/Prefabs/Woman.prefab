@@ -7749,6 +7749,9 @@ MonoBehaviour:
   testObj: {fileID: 0}
   textBubbleRoot: {fileID: 6523551991402717027}
   textBubbleText: {fileID: 4374690970951140995}
+  bubblePanelRect: {fileID: 0}
+  baseTopOffset: 0.12
+  additionalHeightPerLine: 0.12
 --- !u!65 &6138866771500414166
 BoxCollider:
   m_ObjectHideFlags: 0

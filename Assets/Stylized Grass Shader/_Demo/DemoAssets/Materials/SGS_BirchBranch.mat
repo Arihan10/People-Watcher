@@ -22,6 +22,8 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: SGS_BirchBranch
   m_Shader: {fileID: 4800000, guid: d7dd1c3f4cba1d441a7d295a168bac0d, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - _ADVANCED_LIGHTING
   m_InvalidKeywords: []
@@ -31,6 +33,7 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -141,3 +144,4 @@ Material:
     - _SubsurfaceColor: {r: 1, g: 1, b: 1, a: 1}
     - _WindDirection: {r: 1, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1

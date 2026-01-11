@@ -21,7 +21,11 @@ public class CharacterBehaviour : MonoBehaviour
     [Header("Text Bubble Settings")]
     [SerializeField] private GameObject textBubbleRoot; // Assign the parent object of the bubble
     [SerializeField] private TextMeshProUGUI textBubbleText; // Assign the text component
+    [SerializeField] private RectTransform bubblePanelRect; // The panel RectTransform to resize
+    [SerializeField] private float baseTopOffset = -50f; // Base top offset for single line
+    [SerializeField] private float additionalHeightPerLine = 25f; // Additional height per extra line
     private Coroutine currentBubbleRoutine;
+    private float originalTopOffset;
 
     // Optional callback when destination is reached
     public event Action OnReachedDestination;
@@ -48,6 +52,12 @@ public class CharacterBehaviour : MonoBehaviour
         {
             textBubbleRoot.SetActive(false);
             textBubbleRoot.transform.localScale = Vector3.zero;
+            
+            // Store original top offset if bubblePanelRect is assigned
+            if (bubblePanelRect != null)
+            {
+                originalTopOffset = -bubblePanelRect.offsetMax.y; // Top in inspector is negative of offsetMax.y
+            }
         }
     }
 
@@ -74,6 +84,24 @@ public class CharacterBehaviour : MonoBehaviour
     {
         textBubbleText.text = text;
         textBubbleRoot.SetActive(true);
+
+        // Adjust bubble size based on text line count
+        if (bubblePanelRect != null)
+        {
+            // Force text mesh to update so we can get accurate line count
+            textBubbleText.ForceMeshUpdate();
+            int lineCount = textBubbleText.textInfo.lineCount;
+            
+            // Calculate new top offset based on line count
+            // More lines = smaller (more negative) top offset = taller bubble
+            float extraLines = Mathf.Max(0, lineCount - 1);
+            float newTopOffset = baseTopOffset - (extraLines * additionalHeightPerLine);
+            
+            // Apply the new top offset (top in inspector = -offsetMax.y)
+            Vector2 offsetMax = bubblePanelRect.offsetMax;
+            offsetMax.y = -newTopOffset;
+            bubblePanelRect.offsetMax = offsetMax;
+        }
 
         // Animate In (Scale 0 to 1)
         float timer = 0f;
@@ -613,7 +641,7 @@ public class CharacterBehaviour : MonoBehaviour
 
     void Start() {
         
-        //Say("HELLO! I am an alien", 3);
+        Say("I am an alien. HELLO! I am an alien. HELLO! I am an alien. HELLO! I am an alien. HELLO! I am an alien. HELLO! I am an alien. ", 3);
         Kiss(testObj.name, true);
         
     }
