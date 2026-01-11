@@ -248903,6 +248903,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 6160656062554212588, guid: b1b35c3e1dd286f4c8501965bf234629, type: 3}
+      propertyPath: m_StoppingDistance
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7083664222725298649, guid: b1b35c3e1dd286f4c8501965bf234629, type: 3}
       propertyPath: m_LocalPosition.x
       value: 32.84623
@@ -306870,11 +306874,6 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 7527757087965635428, guid: d6fd023093dac7e439096cf30a7032e2, type: 3}
   m_PrefabInstance: {fileID: 1596784991}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &1597009994 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: bda5208d50955b346b17af95964a9d87, type: 3}
-  m_PrefabInstance: {fileID: 1947392424}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &1597009995 stripped
 Transform:
@@ -401475,7 +401474,7 @@ PrefabInstance:
     - target: {fileID: 2729690798290171326, guid: 68581abecca990544938a0405ebac7b8, type: 3}
       propertyPath: testObj
       value: 
-      objectReference: {fileID: 1597009994}
+      objectReference: {fileID: 789056406}
     - target: {fileID: 2759010393767463509, guid: 68581abecca990544938a0405ebac7b8, type: 3}
       propertyPath: m_Name
       value: Man
