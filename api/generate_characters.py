@@ -1,332 +1,311 @@
 """
-Character Generation Script
-Uses Claude 4.5 Sonnet to generate a small rural town with 20 characters.
-Map includes: Park, Pool, Soccer Field, Farmer Market, Campfire, School, Farm, Library, Hospital, and Houses.
-Two-shot approach:
-1. Generate background stories for all characters
-2. Parse and populate relationships, demographics, appearances, and locations
+Character and relationship generation script using Claude Opus 4.5.
+Run this to populate the database with initial characters.
 """
-
-import os
-import json
 import asyncio
-from anthropic import AsyncAnthropic
-from dotenv import load_dotenv
+import json
 from datetime import datetime
+from typing import List, Optional
+from motor.motor_asyncio import AsyncIOMotorClient
+from anthropic import Anthropic
+import os
+from dotenv import load_dotenv
 
 load_dotenv()
 
-# Configuration
-NUM_CHARACTERS = 20
-SETTING = "small rural town with park, pool, soccer field, farmer market, school, farm, library, and hospital"
-OUTPUT_FILE = "generated_characters.json"
-
-# Asset mappings for reference
-HAIR_STYLES = {
-    0: "afro 1", 1: "afro 2", 2: "afro 3", 3: "buzzcut",
-    4: "curly 1", 5: "curly 2", 6: "medium 1", 7: "medium 2",
-    8: "short 1", 9: "short 2", 10: "short 3", 11: "short 4",
-    12: "bun", 13: "ponytail", 14: "double buns", 15: "twintails"
-}
-
-SHOES = {
-    0: "girly boots", 1: "orange running shoes", 2: "sandals",
-    3: "slippers", 4: "boots", 5: "sketchers", 6: "worker boots"
-}
-
-BOTTOMS = {
-    0: "black pants", 1: "shorts", 2: "skirt",
-    3: "jeans", 4: "long shorts (girly)", 5: "baggy joggers"
-}
-
-TOPS = {
-    0: "white gym shirt", 1: "jacket", 2: "sweater", 3: "button shirt orange",
-    4: "reese esque sweater with shirt underneath", 5: "flanel over white t",
-    6: "crop top with yellow jacket", 7: "wheres wally striped shirt",
-    8: "green hoodie", 9: "shirt with tie", 10: "suit top"
-}
-
-JOBS_AND_LOCATIONS = {
-    "School": ["Teacher", "Student", "Principal"],
-    "Hospital": ["Nurse", "Doctor"],
-    "Farm": ["Farmer", "Farmhand"],
-    "Library": ["Librarian", "Library Assistant"],
-    "Farmer Market": ["Market Vendor", "Produce Seller"],
-    "Pool": ["Lifeguard", "Pool Attendant"],
-    "Soccer Field": ["Soccer Coach", "Athlete"],
-    "Park": ["Park Ranger", "Groundskeeper"],
-    "Houses": ["Retired", "Homemaker", "Remote Worker", "Chef", "Artist"],
-    "General": ["Town Mayor", "Handyman", "Delivery Driver"]
-}
-
-ALL_JOBS = [job for jobs in JOBS_AND_LOCATIONS.values() for job in jobs]
-
-MAP_LOCATIONS = [
-    "Park", "Pool", "Soccer Field", "Farmer Market", "Campfire Area",
-    "School", "Farm", "Library", "Hospital", "House 1", "House 2",
-    "House 3", "House 4", "House 5"
-]
+# Import config for thinking setting (shared with llm_service)
+from app.config import get_settings
 
 
-async def generate_character_backgrounds(client: AsyncAnthropic) -> str:
-    """
-    Shot 1: Generate background stories for all 20 characters.
-    Returns a narrative with all character backgrounds.
-    """
+def get_enable_thinking() -> bool:
+    """Get thinking setting from config."""
+    return get_settings().enable_thinking
+
+
+def create_message(client, prompt: str, max_tokens_with_thinking: int, max_tokens_without: int, thinking_budget: int):
+    """Create a message with or without thinking based on config setting. Uses streaming for long requests."""
+    enable_thinking = get_enable_thinking()
+    kwargs = {
+        "model": "claude-opus-4-5",
+        "max_tokens": max_tokens_with_thinking if enable_thinking else max_tokens_without,
+        "messages": [{"role": "user", "content": prompt}]
+    }
+    if enable_thinking:
+        kwargs["thinking"] = {"type": "enabled", "budget_tokens": thinking_budget}
     
-    print("Shot 1: Generating character backgrounds...")
+    # Use streaming to avoid timeout on long requests
+    collected_text = ""
+    collected_thinking = ""
     
-    locations_desc = "\n".join([f"- {loc}: {', '.join(jobs)}" for loc, jobs in JOBS_AND_LOCATIONS.items()])
+    with client.messages.stream(**kwargs) as stream:
+        for event in stream:
+            if hasattr(event, 'type'):
+                if event.type == 'content_block_delta':
+                    if hasattr(event.delta, 'text'):
+                        collected_text += event.delta.text
+                    elif hasattr(event.delta, 'thinking'):
+                        collected_thinking += event.delta.thinking
     
-    prompt = f"""You are a creative writer designing characters for a {SETTING} with {NUM_CHARACTERS} people.
-
-Create {NUM_CHARACTERS} unique characters with rich, interconnected backgrounds. This is a close-knit rural community.
-
-THE TOWN MAP INCLUDES:
-- Park (peaceful area for gatherings)
-- Pool (community swimming pool)
-- Soccer Field (sports and recreation)
-- Farmer Market stands (local produce and goods)
-- Campfire area (community gathering spot)
-- School (middle building - education center)
-- Farm (back building with cows and chickens)
-- Library (left building - knowledge center)
-- Hospital/Nurse station (rightmost building with beds and IV stands)
-- Several residential houses
-
-JOB DISTRIBUTION BY LOCATION:
-{locations_desc}
-
-Requirements:
-- Include families (parents, children, siblings, spouses) - but families should have INTERNAL CONFLICTS
-- Mix of ages (children 5-17, adults 18-60, elders 60+)
-- Various occupations from the list above
-- Complex relationships (friends, rivals, family, romantic interests)
-- Diverse ethnicities (realistic human races - White, Black, Asian, Hispanic, Middle Eastern, etc.)
-- Each person should have meaningful connections to at least 2-3 others
-- IMPORTANT: CREATE DRAMA AND TENSION:
-  * Include love triangles, unrequited love, secret crushes
-  * Create rivalries, grudges, old conflicts that still simmer
-  * Add family drama (estranged siblings, disappointed parents, rebellious children)
-  * Include workplace tensions, professional jealousies
-  * Create conflicting goals and competing interests between characters
-  * Add secrets, betrayals, and unresolved issues
-- IMPORTANT: Each character needs clear BEHAVIORAL TRAITS that guide their decisions:
-  * Ambition level (low/medium/high)
-  * Confrontational tendency (low/medium/high)
-  * Sociability (low/medium/high)
-  * Core life motivation (what they want: family, love, power, knowledge, safety, adventure, etc.)
-  * Other decision-guiding traits (protective, curious, cautious, impulsive, etc.)
-
-For EACH of the {NUM_CHARACTERS} characters, write a background paragraph that includes:
-1. Their name, age, and occupation (from the jobs list above)
-2. Where they work/spend time (specific location on the map)
-3. Their core personality dimensions (ambition level, confrontational tendency)
-4. What they want in life (core motivations like "take care of family", "find love", "gain respect", "escape poverty")
-5. Their family connections AND family tensions/conflicts
-6. Important relationships with other townspeople - emphasize DRAMA:
-   - Romantic interests (unrequited love, love triangles, complicated attractions)
-   - Rivalries and antagonistic relationships
-   - Betrayals, grudges, or past conflicts
-   - Professional jealousies or competing ambitions
-7. A brief life story with emphasis on conflicts and tensions
-
-Format each character as:
----
-CHARACTER [number]
-[Background paragraph]
----
-
-Make the town feel like a DRAMATIC SOAP OPERA with interconnected stories, LOTS of conflicts, romantic tensions, family drama, rivalries, and complicated dynamics. This should feel like a reality TV show where everyone has beef with someone!"""
-
-    response = await client.messages.create(
-        model="claude-sonnet-4-5-20250929",
-        max_tokens=8000,
-        messages=[{
-            "role": "user",
-            "content": prompt
-        }]
-    )
+    # Return a simple object that mimics the response structure
+    class StreamedResponse:
+        def __init__(self, text, thinking, enable_thinking):
+            from types import SimpleNamespace
+            if enable_thinking and thinking:
+                self.content = [
+                    SimpleNamespace(type="thinking", thinking=thinking),
+                    SimpleNamespace(type="text", text=text)
+                ]
+            else:
+                self.content = [SimpleNamespace(type="text", text=text)]
     
-    backgrounds = response.content[0].text
-    print(f"Generated {len(backgrounds)} characters of background text")
-    return backgrounds
+    return StreamedResponse(collected_text, collected_thinking, enable_thinking)
 
 
-async def parse_characters_to_structured_data(client: AsyncAnthropic, backgrounds: str) -> list:
-    """
-    Shot 2: Parse backgrounds into structured character data with relationships.
-    Returns list of character dictionaries.
+def extract_text(response) -> str:
+    """Extract text from response, handling both thinking and non-thinking modes."""
+    if get_enable_thinking():
+        return next(block.text for block in response.content if block.type == "text")
+    return response.content[0].text
+
+
+async def generate_village(
+    num_characters: int = 10, 
+    house_spaces: Optional[List[str]] = None,
+    all_spaces: Optional[List[str]] = None
+):
+    """Generate characters and relationships for the village.
+    
+    Args:
+        num_characters: Number of characters to generate
+        house_spaces: List of house/residential space names. Characters will be assigned homes from this list.
+        all_spaces: List of ALL space names in the village (hospital, school, market, etc.) for context.
+                   This helps the LLM generate appropriate characters for the village's facilities.
     """
     
-    print("\nShot 2: Parsing into structured data...")
+    # Initialize clients
+    client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/village_sim")
+    mongo_client = AsyncIOMotorClient(mongo_uri)
+    db = mongo_client.village_sim  # Explicitly use village_sim database
     
-    # Create appearance codes reference for the LLM
-    appearance_guide = f"""
-APPEARANCE ASSET CODES (choose appropriate codes):
+    # Clear existing data
+    await db.characters.delete_many({})
+    await db.relationships.delete_many({})
+    print("Cleared existing characters and relationships.")
+    print(f"Extended thinking: {'enabled' if get_enable_thinking() else 'disabled'}")
+    
+    print(f"Generating {num_characters} characters...")
+    if all_spaces:
+        print(f"Village spaces: {', '.join(all_spaces)}")
+    if house_spaces:
+        print(f"Available houses: {', '.join(house_spaces)}")
+    
+    # Build village context from all spaces
+    village_context = ""
+    if all_spaces:
+        village_context = f"""
+## VILLAGE LAYOUT
+This village has the following locations: {', '.join(all_spaces)}
 
-Hair (0-15): {', '.join(f"{k}={v}" for k, v in HAIR_STYLES.items())}
-Shoes (0-6): {', '.join(f"{k}={v}" for k, v in SHOES.items())}
-Bottom (0-5): {', '.join(f"{k}={v}" for k, v in BOTTOMS.items())}
-Top (0-10): {', '.join(f"{k}={v}" for k, v in TOPS.items())}
+Generate characters whose occupations and backgrounds make sense for this village. 
+For example, if there's a hospital, consider having a doctor or nurse. If there's a school, consider a teacher. These are not forced obligations, they are examples of what might occur.
+
+HOWEVER: Do not limit yourself to the boring constraints of the village. The point of this simulation is for it to be fun - generate interesting characters that happen to be connected to the village.
 """
     
-    jobs_list = ', '.join(ALL_JOBS)
+    # Build house assignment instruction if spaces provided
+    house_instruction = ""
+    if house_spaces:
+        house_instruction = f"""- home_space (assign each character to one of these houses ONLY: {', '.join(house_spaces)})
+  IMPORTANT: Distribute characters across the available houses. Some houses can have multiple residents (couples, families, roommates), 
+  but not all characters should live in the same house. Consider relationships when assigning homes.
+"""
     
-    prompt = f"""Parse the following character backgrounds into structured JSON data.
+    # Shot 1: Generate characters
+    character_prompt = f"""Generate {num_characters} unique villagers for a small village simulation.
+{village_context}
+For each character provide:
 
-{backgrounds}
+- name (first name or first + last)
+- age (18-80)
+- gender
+- race
+- occupation (farmer, blacksmith, merchant, baker, teacher, healer, guard, innkeeper, carpenter, weaver, etc.)
+- appearance (indices for: top 0-5, bottom 0-5, shoes 0-3, hair 0-7)
+- personality_traits (3-5 traits like: kind, grumpy, ambitious, lazy, curious, shy, confident, etc.)
+- core_motivations (2-3 life goals)
+- ambition_level (0-100)
+- confrontational_tendency (0-100)
+- background (2-3 sentences of life history)
+- initial_desire (what they want to do at the beginning of the simulation - should fit their occupation and personality, e.g. "bake fresh bread", "check on the crops", "go to school", "kiss wife", etc.)
+{house_instruction}
+Make characters diverse with interesting potential for drama and relationships. Use simple, direct language without fluff, and focus on making it realistic.
+Output as a JSON array of objects."""
+    
+    response = create_message(client, character_prompt, 100000, 40960, 10000)
+    
+    # Parse characters
+    raw_text = extract_text(response)
+    
+    # Extract JSON from response
+    if "```json" in raw_text:
+        start = raw_text.find("```json") + 7
+        end = raw_text.find("```", start)
+        raw_text = raw_text[start:end].strip()
+    elif "```" in raw_text:
+        start = raw_text.find("```") + 3
+        end = raw_text.find("```", start)
+        raw_text = raw_text[start:end].strip()
+    
+    characters = json.loads(raw_text)
+    
+    # Insert characters into database
+    for char in characters:
+        char_id = char["name"].lower().replace(" ", "_")
+        char["_id"] = char_id
+        
+        # Use LLM-generated initial desire
+        char["current_desire"] = char.pop("initial_desire", "explore the village")
+        
+        # Extract home_space if provided by LLM
+        home_space = char.pop("home_space", None)
+        char["home_space"] = home_space
+        
+        char["current_activity"] = {
+            "type": "idle",
+            "target": None,
+            "description": "idle",
+            "started_at": datetime.utcnow()
+        }
+        char["needs"] = {
+            "happiness": 70,
+            "energy": 100,
+            "hunger": 30,
+            "hygiene": 80,
+            "health": 100
+        }
+        char["feelings"] = {
+            "anger": 0,
+            "sadness": 0,
+            "excitement": 20,
+            "fear": 0,
+            "love": 0
+        }
+        char["action_log"] = []
+        char["memory_log"] = []
+        char["is_in_interaction"] = False
+        char["active_session_id"] = None
+        char["last_known_position"] = None
+        char["last_known_space"] = None
+        
+        await db.characters.insert_one(char)
+        home_info = f" (home: {home_space})" if home_space else ""
+        print(f"  Created character: {char['name']}{home_info}")
+    
+    print(f"\nGenerated {len(characters)} characters successfully!")
+    
+    # Shot 2: Generate relationships
+    print(f"\nGenerating relationships...")
+    
+    names = [c["name"] for c in characters]
+    relationship_prompt = f"""Given these villagers: {', '.join(names)}
 
-{appearance_guide}
+Generate the relationship network. Not everyone knows everyone - create a realistic small village social graph.
+For each relationship provide:
+- characters: [name1, name2] (alphabetically sorted, use exact names from the list)
+- name1_to_name2: {{"status": "friendly|romantic|antagonistic|neutral", "affection": 0-100, "trust": 0-100, "respect": 0-100}}
+- name2_to_name1: {{"status": "friendly|romantic|antagonistic|neutral", "affection": 0-100, "trust": 0-100, "respect": 0-100}}
+- background (1-2 sentences explaining their relationship history)
 
-For EACH character, create a JSON object with:
-{{
-  "name": "Full Name",
-  "age": <number>,
-  "race": "White/Black/Asian/Hispanic/Middle Eastern/Native American/Mixed/etc (realistic human ethnicities)",
-  "gender": "Male/Female/Non-binary",
-  "occupation": "occupation from: {jobs_list}",
-  "background": "Their full background story (2-3 sentences)",
-  "personality_traits": [
-    "ambition: low/medium/high",
-    "confrontational: low/medium/high",
-    "sociable: low/medium/high",
-    "core_motivation: [specific goal like 'take care of family', 'find love', 'gain respect', 'become wealthy', 'seek adventure', 'protect others', etc.]",
-    "[other relevant behavioral traits that will guide their decisions]",
-    ...
-  ],
-  "appearance": {{
-    "hair": <0-15>,
-    "shoes": <0-6>,
-    "bottom": <0-5>,
-    "top": <0-10>
-  }},
-  "relationships": [
-    {{
-      "target_name": "Name of other character",
-      "relationship_type": "Family/Friend/Romantic/Professional/Rival",
-      "relationship_summary": "How this character feels about the target",
-      "relationship_score": <-100 to 100>
-    }}
-  ],
-  "needs": {{
-    "happiness": <0-100>,
-    "energy": <0-100>,
-    "hunger": <0-100>,
-    "hygiene": <0-100>,
-    "anger": <0-100>,
-    "sadness": <0-100>
-  }}
-}}
+Create interesting dynamics:
+- Some childhood friends
+- A romantic couple or two
+- Some family connections
+- A rivalry or conflict
+- Some strangers who don't know each other well
 
-IMPORTANT:
-1. Choose appearance codes that fit rural/modern setting (e.g., worker boots for farmers, casual wear for students)
-2. PERSONALITY TRAITS must be DECISION-GUIDING, not just descriptive. Include:
-   - "ambition: low/medium/high" (how driven are they?)
-   - "confrontational: low/medium/high" (do they avoid or seek conflict?)
-   - "sociable: low/medium/high" (do they seek company or solitude?)
-   - "core_motivation: [specific goal]" (what do they want in life?)
-   - Additional behavioral traits that affect decisions (protective, curious, cautious, impulsive, loyal, etc.)
-3. Create relationships BETWEEN the characters (use their names) - EMPHASIZE DRAMA:
-   - Each character should have 4-6 relationships minimum
-   - AT LEAST 30-40% of relationships should be negative/tense (scores below 20)
-   - Include love triangles (Person A loves Person B who loves Person C)
-   - Include rivalries and antagonistic relationships (negative scores)
-   - Include complicated family dynamics (even family can have low scores due to conflict)
-   - Use relationship_type "Romantic" for crushes, attractions, or complicated feelings
-   - Use relationship_type "Rival" for antagonistic relationships
-4. Ensure family relationships are bidirectional (if A is B's parent, B is A's child) - but scores can differ!
-5. Relationship scores: 
-   - 80-100 (deep love/very positive) 
-   - 40-80 (positive/friendly)
-   - 20-40 (neutral/awkward)
-   - 0-20 (tense/uncomfortable)
-   - -20-0 (dislike/conflict)
-   - -40--20 (strong dislike/rivalry)
-   - -100--40 (hatred/hostility)
-   USE THE FULL RANGE! Don't just make everyone friendly.
-6. Set reasonable initial needs (most people around 50-70)
-
-Return ONLY a valid JSON array of {NUM_CHARACTERS} character objects. No markdown, no explanation."""
-
-    response = await client.messages.create(
-        model="claude-sonnet-4-5-20250929",
-        max_tokens=16000,
-        messages=[{
-            "role": "user",
-            "content": prompt
-        }]
-    )
+Don't create relationships for every possible pair - only for {num_characters * 2} to {num_characters * 3} meaningful relationships. Use simple, direct language without fluff, and focus on making it realistic and grounded in reality (but still interesting). 
+Output as a JSON array."""
     
-    json_text = response.content[0].text.strip()
+    response = create_message(client, relationship_prompt, 100000, 40960, 10000)
     
-    # Remove markdown code blocks if present
-    if json_text.startswith("```"):
-        json_text = json_text.split("```")[1]
-        if json_text.startswith("json"):
-            json_text = json_text[4:]
-        json_text = json_text.strip()
+    # Parse relationships
+    raw_text = extract_text(response)
     
-    try:
-        characters = json.loads(json_text)
-        print(f"Successfully parsed {len(characters)} characters")
-        return characters
-    except json.JSONDecodeError as e:
-        print(f"JSON parsing error: {e}")
-        print(f"Response text:\n{json_text[:500]}...")
-        raise
-
-
-async def main():
-    """Main generation workflow."""
+    if "```json" in raw_text:
+        start = raw_text.find("```json") + 7
+        end = raw_text.find("```", start)
+        raw_text = raw_text[start:end].strip()
+    elif "```" in raw_text:
+        start = raw_text.find("```") + 3
+        end = raw_text.find("```", start)
+        raw_text = raw_text[start:end].strip()
     
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise ValueError("ANTHROPIC_API_KEY not found in environment")
+    relationships = json.loads(raw_text)
     
-    client = AsyncAnthropic(api_key=api_key)
+    # Insert relationships into database
+    for rel in relationships:
+        # Convert names to character IDs
+        char_names = rel["characters"]
+        char_ids = [name.lower().replace(" ", "_") for name in char_names]
+        char_ids_sorted = sorted(char_ids)
+        
+        rel_id = "_".join(char_ids_sorted)
+        
+        # Build directional fields
+        rel_doc = {
+            "_id": rel_id,
+            "characters": char_ids_sorted,
+            "background": rel["background"],
+            "interaction_history": [],
+            "is_interacting": False,
+            "active_session_id": None
+        }
+        
+        # Add directional feelings
+        for i, char_id in enumerate(char_ids):
+            other_id = char_ids[1-i]
+            direction_key = f"{char_id}_to_{other_id}"
+            
+            # Get the direction data from the response
+            source_key = f"{char_names[i]}_to_{char_names[1-i]}"
+            if source_key in rel:
+                rel_doc[direction_key] = rel[source_key]
+            else:
+                # Fallback if not found
+                rel_doc[direction_key] = {
+                    "status": "neutral",
+                    "affection": 50,
+                    "trust": 50,
+                    "respect": 50
+                }
+        
+        await db.relationships.insert_one(rel_doc)
+        print(f"  Created relationship: {' & '.join(char_names)}")
     
-    print(f"=== Rural Town Character Generator ===")
-    print(f"Generating {NUM_CHARACTERS} characters for {SETTING}")
-    print(f"Map Locations: {', '.join(MAP_LOCATIONS[:5])}...")
-    print(f"Using Claude 4.5 Sonnet\n")
+    print(f"\nGenerated {len(relationships)} relationships successfully!")
+    print(f"\nDatabase populated! Ready to run the simulation.")
     
-    # Shot 1: Generate backgrounds
-    backgrounds = await generate_character_backgrounds(client)
+    mongo_client.close()
     
-    # Shot 2: Parse to structured data
-    characters = await parse_characters_to_structured_data(client, backgrounds)
-    
-    # Add metadata
-    output_data = {
-        "metadata": {
-            "generated_at": datetime.utcnow().isoformat(),
-            "setting": SETTING,
-            "num_characters": len(characters),
-            "model": "claude-sonnet-4-5-20250929"
-        },
-        "characters": characters
+    return {
+        "characters_created": len(characters),
+        "relationships_created": len(relationships),
+        "character_names": [c["name"] for c in characters]
     }
-    
-    # Save to JSON
-    with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
-        json.dump(output_data, f, indent=2, ensure_ascii=False)
-    
-    print(f"\n=== Generation Complete ===")
-    print(f"Characters saved to: {OUTPUT_FILE}")
-    print(f"\nCharacters generated:")
-    for i, char in enumerate(characters, 1):
-        print(f"{i}. {char['name']} - {char['age']}yo {char['occupation']}")
-        print(f"   Relationships: {len(char.get('relationships', []))}")
-    
-    # Statistics
-    total_relationships = sum(len(c.get('relationships', [])) for c in characters)
-    print(f"\nTotal relationships: {total_relationships}")
-    print(f"Average relationships per character: {total_relationships / len(characters):.1f}")
-    
-    print(f"\nNext step: Run 'python load_to_mongo.py' to load into database")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
-
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Generate village characters')
+    parser.add_argument('--num', type=int, default=10, help='Number of characters to generate')
+    parser.add_argument('--houses', nargs='*', help='List of house space names for home assignment')
+    parser.add_argument('--spaces', nargs='*', help='List of all space names in the village (for context)')
+    args = parser.parse_args()
+    
+    asyncio.run(generate_village(
+        num_characters=args.num, 
+        house_spaces=args.houses,
+        all_spaces=args.spaces
+    ))

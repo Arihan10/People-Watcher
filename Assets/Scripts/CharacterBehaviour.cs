@@ -120,14 +120,29 @@ public class CharacterBehaviour : MonoBehaviour
             }
         }
 
-        // Find all objects with the given name
+        // Find all objects with the given name (case-insensitive, partial match)
         GameObject[] allObjects = GameObject.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
         GameObject nearestObject = null;
         float nearestDistance = float.MaxValue;
+        
+        string searchName = objectName.ToLower();
 
         foreach (GameObject obj in allObjects)
         {
-            if (obj.name == objectName)
+            string objName = obj.name.ToLower();
+            
+            // Exact match (case-insensitive) has priority
+            if (objName == searchName)
+            {
+                float distance = Vector3.Distance(transform.position, obj.transform.position);
+                if (distance < nearestDistance)
+                {
+                    nearestDistance = distance;
+                    nearestObject = obj;
+                }
+            }
+            // Fallback: partial match
+            else if (nearestObject == null && (objName.Contains(searchName) || searchName.Contains(objName)))
             {
                 float distance = Vector3.Distance(transform.position, obj.transform.position);
                 if (distance < nearestDistance)
@@ -140,9 +155,11 @@ public class CharacterBehaviour : MonoBehaviour
 
         if (nearestObject == null)
         {
-            Debug.LogWarning($"No object with name '{objectName}' found in scene.");
+            Debug.LogError($"[MOVEMENT FAILED] No object matching '{objectName}' found in scene. Character {name} cannot move.");
             return;
         }
+        
+        Debug.Log($"[MOVEMENT] {name} moving to {nearestObject.name} (searched for: {objectName})");
 
         Vector3 target = nearestObject.transform.position;
         agent.SetDestination(target);
@@ -287,8 +304,43 @@ public class CharacterBehaviour : MonoBehaviour
         animator?.SetBool("isSexing", isSexing);
     }
 
+    /// <summary>
+    /// Plays an emote animation/effect without speech.
+    /// </summary>
+    /// <param name="emote">The emote type: wave, laugh, sigh, gasp, nod, shake_head, shrug</param>
+    public void Emote(string emote)
+    {
+        switch (emote.ToLower())
+        {
+            case "wave":
+                animator?.SetTrigger("wave");
+                break;
+            case "laugh":
+                animator?.SetTrigger("laugh");
+                break;
+            case "sigh":
+                animator?.SetTrigger("sigh");
+                break;
+            case "gasp":
+                animator?.SetTrigger("gasp");
+                break;
+            case "nod":
+                animator?.SetTrigger("nod");
+                break;
+            case "shake_head":
+                animator?.SetTrigger("shakeHead");
+                break;
+            case "shrug":
+                animator?.SetTrigger("shrug");
+                break;
+            default:
+                Debug.LogWarning($"Unknown emote: {emote}");
+                break;
+        }
+    }
+    
     void Start() {
         // MoveTo(testObj.transform.position, false);
-        Say("HELLO! I am an alien", 3);
+        // Say("HELLO! I am an alien", 3);
     }
 }

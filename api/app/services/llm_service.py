@@ -1,1030 +1,385 @@
-"""LLM service for generating character responses and interactions."""
+import anthropic
+import json
+import logging
+from typing import Dict, List, Optional, Any
+from datetime import datetime
+from ..config import get_settings
+from ..models import Action, ActionType
+from ..logger_middleware import get_session_logger
 
-import os
-import asyncio
-from cerebras.cloud.sdk import Cerebras
-from app.config import settings
+logger = logging.getLogger(__name__)
+session_logger = get_session_logger()
+
+VALID_ACTION_TYPES = {e.value for e in ActionType}
 
 
 class LLMService:
-    """Service for making LLM calls."""
+    """Service for LLM interactions using Claude Opus 4.5."""
     
     def __init__(self):
-        self.client = Cerebras(api_key=settings.cerebras_api_key)
-        self.model = "qwen-3-235b-a22b-instruct-2507"
+        settings = get_settings()
+        self.client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+        self.model = "claude-opus-4-5"
+        self.enable_thinking = settings.enable_thinking
     
-    async def generate_dialogue(
+    def _extract_text(self, response) -> str:
+        """Extract text from response, handling both thinking and non-thinking modes."""
+        if self.enable_thinking:
+            return next(block.text for block in response.content if block.type == "text")
+        return response.content[0].text
+    
+    async def decide(
         self,
-        character,
-        other_characters,
-        conversation_history,
-        space_info=None,
-        relationships=None
-    ) -> str:
+        character: Dict[str, Any],
+        trigger: str,
+        space_states: List[Dict],
+        global_context: Dict,
+        nearby_relationships: List[Dict],
+        is_in_interaction: bool = False,
+        interaction_context: Optional[Dict] = None
+    ) -> Dict[str, Any]:
         """
-        Generate what a character would say in a conversation.
-        
-        Args:
-            character: The character who is speaking
-            other_characters: Other participants in the conversation
-            conversation_history: Previous messages in this interaction
-            space_info: Information about where this is happening
-            relationships: Character's relationships with other participants
-        
-        Returns:
-            What the character says
+        Core decision-making. Returns state changes and action.
         """
-        
-        # Build comprehensive context
-        context_parts = []
-        
-        # Character identity
-        context_parts.append(f"You are {character['name']}, a {character['age']}-year-old {character['race']} {character['occupation']}.")
-        context_parts.append(f"Background: {character['background']}")
-        context_parts.append(f"Personality: {', '.join(character['personality_traits'])}")
-        
-        # Current state/needs
-        needs = character.get('needs', {})
-        context_parts.append(f"\nCurrent state:")
-        context_parts.append(f"- Happiness: {needs.get('happiness', 50)}/100")
-        context_parts.append(f"- Energy: {needs.get('energy', 50)}/100")
-        context_parts.append(f"- Hunger: {needs.get('hunger', 50)}/100")
-        context_parts.append(f"- Anger: {needs.get('anger', 50)}/100")
-        context_parts.append(f"- Sadness: {needs.get('sadness', 50)}/100")
-        
-        if character.get('current_desire'):
-            context_parts.append(f"- Current desire: {character['current_desire']}")
-        
-        # Recent memories (show up to 20 for maximum context)
-        if character.get('memory_log'):
-            context_parts.append(f"\nRecent memories:")
-            for memory in character['memory_log'][-20:]:
-                context_parts.append(f"- {memory['event']}")
-        
-        # Recent actions (show up to 20 for maximum context)
-        if character.get('action_log'):
-            context_parts.append(f"\nRecent actions:")
-            for action in character['action_log'][-20:]:
-                context_parts.append(f"- {action['action']}: {action.get('details', '')}")
-        
-        # Relationships with other participants (bidirectional format)
-        if relationships:
-            context_parts.append(f"\nYour relationships:")
-            for rel in relationships:
-                # Extract this character's perspective
-                char_id = str(character['_id'])
-                if str(rel.get('character_id_1')) == char_id:
-                    # This character is char1
-                    other_id = rel.get('character_id_2')
-                    my_score = rel.get('char1_score', 0)
-                    my_summary = rel.get('char1_summary', '')
-                    rel_type = rel.get('char1_relationship_type', 'Acquaintance')
-                    my_history = rel.get('char1_interaction_history', [])
-                else:
-                    # This character is char2
-                    other_id = rel.get('character_id_1')
-                    my_score = rel.get('char2_score', 0)
-                    my_summary = rel.get('char2_summary', '')
-                    rel_type = rel.get('char2_relationship_type', 'Acquaintance')
-                    my_history = rel.get('char2_interaction_history', [])
-                
-                other_char = next((c for c in other_characters if str(c['_id']) == other_id), None)
-                if other_char:
-                    context_parts.append(f"- {other_char['name']}: {rel_type} (score: {my_score}/100)")
-                    context_parts.append(f"  {my_summary}")
-                    
-                    # Recent interactions (show up to 10 for context)
-                    if my_history:
-                        recent = my_history[-10:]
-                        if recent:
-                            context_parts.append(f"  Recent interactions:")
-                            for interaction in recent:
-                                context_parts.append(f"  - {interaction['summary']}")
-        
-        # Space/location context
-        if space_info:
-            context_parts.append(f"\nLocation: {space_info['name']}")
-            if space_info.get('activities_description'):
-                context_parts.append(f"What's happening here: {space_info['activities_description']}")
-            if space_info.get('available_objects'):
-                context_parts.append(f"Objects nearby: {', '.join(space_info['available_objects'])}")
-        
-        # Other participants in conversation
-        context_parts.append(f"\nYou are talking with:")
-        for other in other_characters:
-            context_parts.append(f"- {other['name']}: {other['age']}yo {other['occupation']}")
-            context_parts.append(f"  Personality: {', '.join(other['personality_traits'][:3])}")
-        
-        # Conversation so far
-        if conversation_history:
-            context_parts.append(f"\nConversation so far:")
-            for msg in conversation_history:
-                speaker = msg['character_name']
-                content = msg['content']
-                context_parts.append(f"{speaker}: {content}")
-        else:
-            context_parts.append(f"\nThis conversation is just starting.")
-        
-        # Build the prompt
-        context = "\n".join(context_parts)
-        
-        prompt = f"""{context}
-
-Based on your personality, current state, relationships, and the conversation so far, what would you say next?
-
-IMPORTANT:
-- Stay in character based on your personality traits and background
-- Consider your relationship with the other person/people
-- Your response should be natural and realistic
-- Keep it to 1-3 sentences
-- Show emotion and personality
-- Do NOT use asterisks or actions, just speak naturally
-
-Respond ONLY with what {character['name']} would say (no quotes, no labels, just the dialogue):"""
-
-        # Call Cerebras with timeout
-        try:
-            response = await asyncio.wait_for(
-                asyncio.to_thread(
-                    lambda: self.client.chat.completions.create(
-                        model=self.model,
-                        max_tokens=300,
-                        messages=[{
-                            "role": "user",
-                            "content": prompt
-                        }]
-                    )
-                ),
-                timeout=30.0  # 30 second timeout
-            )
-        except asyncio.TimeoutError:
-            print(f"⚠️ LLM timeout for dialogue generation")
-            return "..."  # Fallback response
-        
-        return response.choices[0].message.content.strip()
-    
-    async def generate_object_interaction(
-        self,
-        character,
-        object_name: str
-    ) -> str:
-        """
-        Generate flavor text for a character interacting with an object.
-        
-        Args:
-            character: The character using the object
-            object_name: Name of the object being used
-            space_info: Optional space/location context
-        
-        Returns:
-            Flavor text describing the interaction
-        """
-        
-        # Build context
-        context_parts = []
-        
-        context_parts.append(f"Character: {character['name']}, a {character['age']}-year-old {character['occupation']}")
-        context_parts.append(f"Personality: {', '.join(character['personality_traits'][:4])}")
-        
-        # Current state
-        needs = character.get('needs', {})
-        context_parts.append(f"Current mood/state:")
-        context_parts.append(f"- Happiness: {needs.get('happiness', 50)}/100")
-        context_parts.append(f"- Energy: {needs.get('energy', 50)}/100")
-        context_parts.append(f"- Anger: {needs.get('anger', 50)}/100")
-        context_parts.append(f"- Sadness: {needs.get('sadness', 50)}/100")
-        
-        if character.get('current_desire'):
-            context_parts.append(f"- Current desire: {character['current_desire']}")
-        
-        context = "\n".join(context_parts)
-        
-        prompt = f"""{context}
-
-{character['name']} is interacting with: {object_name}
-
-Generate a SHORT, punchy flavor text (5-8 words max) describing this interaction. This will appear as a subtitle above the character.
-
-IMPORTANT:
-- Keep it VERY SHORT (5-8 words maximum)
-- Include 1-2 relevant emojis
-- Use third person (e.g., "sits on the bench 🪑")
-- Show their personality in the action
-- Make it interesting but concise
-- NO full sentences, just key action + emoji
-
-Example GOOD formats:
-- "polishing mugs behind the bar 🍺✨"
-- "hammering metal at the forge ⚒️🔥"
-- "reading by the fireplace 📖🔥"
-- "napping on a bench 😴💤"
-- "practicing sword swings ⚔️💪"
-
-BAD (too long): "Sarah sits down on the bench and contemplates her day"
-GOOD (concise): "resting on the bench 🪑💭"
-
-Generate the flavor text:"""
-
-        try:
-            response = await asyncio.wait_for(
-                asyncio.to_thread(
-                    lambda: self.client.chat.completions.create(
-                        model=self.model,
-                        max_tokens=50,  # Reduced for shorter responses
-                        messages=[{
-                            "role": "user",
-                            "content": prompt
-                        }]
-                    )
-                ),
-                timeout=20.0  # 20 second timeout
-            )
-        except asyncio.TimeoutError:
-            print(f"⚠️ LLM timeout for object interaction")
-            return "interacting..."  # Fallback
-        
-        return response.choices[0].message.content.strip()
-    
-    # Removed generate_space_activities - no longer used (spaces managed by Unity)
-    
-    async def generate_space_context_from_characters(
-        self,
-        space_name: str,
-        characters: list,
-        available_objects: list = None,
-        current_description: str = None
-    ) -> str:
-        """
-        Generate space context description from characters present.
-        Only describes what they're ACTUALLY doing based on current_desire and recent actions.
-        Unity provides available_objects for this space.
-        Updates current_description minimally if provided.
-        """
-        
-        if not characters:
-            return ""
-        
-        # Build ACTUAL activity descriptions
-        descriptions = []
-        for char in characters:
-            # Get their actual current activity
-            desire = char.get('current_desire', '')
-            recent_actions = char.get('action_log', [])
-            
-            # Get last action if exists
-            last_action = None
-            if recent_actions:
-                last_action = recent_actions[-1].get('action', '')
-            
-            # Only describe if they have a desire or recent action
-            if desire:
-                descriptions.append(f"{char['name']} (wants to: {desire})")
-            elif last_action and last_action != 'decided':
-                descriptions.append(f"{char['name']} (recently: {last_action})")
-            else:
-                descriptions.append(f"{char['name']}")
-        
-        # If no one has desires or actions, return nothing
-        if all('wants to' not in d and 'recently' not in d for d in descriptions):
-            return ""
-        
-        # Create simple list-based description
-        context = "\n".join(descriptions)
-        
-        # Add available objects if provided
-        objects_context = ""
-        if available_objects:
-            objects_context = f"\nAvailable objects in this space: {', '.join(available_objects)}"
-            
-        # Add previous description context
-        prev_desc_context = ""
-        if current_description:
-            prev_desc_context = f"\nPREVIOUS DESCRIPTION: {current_description}\n\nINSTRUCTION: Update the previous description ONLY if character activities have changed. Maintain consistency. If nothing changed, return the exact same string."
-        
-        prompt = f"""Location: {space_name}{objects_context}
-
-Characters present and their current states:
-{context}
-{prev_desc_context}
-
-Generate a FACTUAL, LITERAL description of what each person is doing OR wanting to do. You will be called frequently, if nothing has changed, return the exact same string, keep changes minimal and to a minimum.
-Generate ONLY literal description:"""
-
-        try:
-            response = await asyncio.wait_for(
-                asyncio.to_thread(
-                    lambda: self.client.chat.completions.create(
-                        model=self.model,
-                        max_tokens=150,
-                        messages=[{
-                            "role": "user",
-                            "content": prompt
-                        }]
-                    )
-                ),
-                timeout=20.0  # 20 second timeout
-            )
-        except asyncio.TimeoutError:
-            print(f"⚠️ LLM timeout for space context generation")
-            return ""  # Return empty description on timeout
-        
-        result = response.choices[0].message.content.strip()
-        
-        # If result is too generic or empty, just return empty string
-        if not result or len(result) < 10:
-            return ""
-        
-        return result
-    
-    async def generate_decision_for_unity(
-        self,
-        character,
-        trigger_source: str,
-        space_states: list,
-        global_context=None,
-        relationships=None,
-        nearby_characters=None,
-        active_conversation=None
-    ) -> dict:
-        """
-        Generate a decision for Unity integration.
-        Can perceive multiple spaces (perception radius may overlap).
-        Returns action object with actionType and props.
-        """
-        
-        # Build comprehensive context
-        context_parts = []
-        
-        # Character identity
-        context_parts.append(f"You are {character['name']}, a {character['age']}-year-old {character['occupation']}.")
-        context_parts.append(f"Background: {character['background']}")
-        
-        # Personality (decision-guiding)
-        context_parts.append(f"\nPersonality:")
-        for trait in character.get('personality_traits', []):
-            context_parts.append(f"- {trait}")
-        
-        # Current state
-        needs = character.get('needs', {})
-        context_parts.append(f"\nCurrent State:")
-        context_parts.append(f"- Happiness: {needs.get('happiness', 50)}/100")
-        context_parts.append(f"- Energy: {needs.get('energy', 50)}/100")
-        context_parts.append(f"- Hunger: {needs.get('hunger', 50)}/100")
-        context_parts.append(f"- Hygiene: {needs.get('hygiene', 50)}/100")
-        context_parts.append(f"- Anger: {needs.get('anger', 50)}/100")
-        context_parts.append(f"- Sadness: {needs.get('sadness', 50)}/100")
-        
-        if character.get('current_desire'):
-            context_parts.append(f"- Current desire: {character['current_desire']}")
-        
-        # Visible spaces (perception radius - can see multiple)
-        if space_states and len(space_states) > 0:
-            context_parts.append(f"\nVisible Locations (in perception radius):")
-            for space_state in space_states:
-                context_parts.append(f"\n- {space_state.space_name}:")
-                if space_state.description:
-                    context_parts.append(f"  Scene: {space_state.description}")
-                if space_state.characters_present:
-                    context_parts.append(f"  People: {', '.join(space_state.characters_present)}")
-                if space_state.available_objects:
-                    context_parts.append(f"  Objects: {', '.join(space_state.available_objects[:8])}")
-        
-        # Relationships with nearby people
-        if relationships and nearby_characters:
-            context_parts.append(f"\nRelationships with visible people:")
-            for rel in relationships:
-                # Extract this character's perspective
-                if str(rel.get("character_id_1")) == str(character["_id"]):
-                    other_id = rel.get("character_id_2")
-                    my_score = rel.get("char1_score", 0)
-                    my_summary = rel.get("char1_summary", "")
-                    rel_type = rel.get("char1_relationship_type", "Acquaintance")
-                    my_history = rel.get("char1_interaction_history", [])
-                else:
-                    other_id = rel.get("character_id_1")
-                    my_score = rel.get("char2_score", 0)
-                    my_summary = rel.get("char2_summary", "")
-                    rel_type = rel.get("char2_relationship_type", "Acquaintance")
-                    my_history = rel.get("char2_interaction_history", [])
-                
-                # Find if this person is nearby
-                other_char = next((c for c in nearby_characters if str(c["_id"]) == other_id), None)
-                if other_char:
-                    context_parts.append(f"- {other_char['name']}: {rel_type} (score: {my_score}/100)")
-                    if my_summary:
-                        context_parts.append(f"  {my_summary}")
-                    
-                    # Show recent interactions with this person (up to 10 for maximum context)
-                    if my_history:
-                        recent_interactions = my_history[-10:]
-                        if recent_interactions:
-                            context_parts.append(f"  Recent interactions:")
-                            for interaction in recent_interactions:
-                                summary = interaction.get('summary', '')
-                                feeling = interaction.get('emotional_impact', '')
-                                # Truncate long summaries
-                                if len(summary) > 80:
-                                    summary = summary[:80] + "..."
-                                context_parts.append(f"    - {summary} (felt: {feeling})")
-        
-        # Recent memories (show up to 20 for maximum context)
-        if character.get('memory_log'):
-            context_parts.append(f"\nRecent Memories:")
-            for memory in character['memory_log'][-20:]:
-                context_parts.append(f"- {memory['event']}")
-        
-        # Recent actions (show up to 20 for maximum context - CRITICAL for understanding current state)
-        if character.get('action_log'):
-            context_parts.append(f"\nRecent Actions:")
-            for action in character['action_log'][-20:]:
-                context_parts.append(f"- {action['action']}: {action.get('details', '')[:60]}")
-        
-        # Global context
-        if global_context:
-            context_parts.append(f"\nWorld State:")
-            if global_context.time:
-                context_parts.append(f"- Time: {global_context.time}")
-            if global_context.all_spaces:
-                context_parts.append(f"- All locations in world: {', '.join(global_context.all_spaces)}")
-            if global_context.character_locations:
-                context_parts.append(f"- Character positions:")
-                # Show only a subset to avoid overwhelming context
-                for loc in global_context.character_locations[:10]:
-                    context_parts.append(f"  * {loc.character_name} at {loc.space_name}")
-        
-        # Active conversation context (if character is currently talking to someone)
-        if active_conversation:
-            context_parts.append(f"\n🎯 YOU ARE CURRENTLY IN A CONVERSATION:")
-            context_parts.append(f"Type: {active_conversation.get('interaction_type', 'dialog')}")
-            context_parts.append(f"With: {', '.join([n for n in active_conversation.get('participant_names', []) if n != character['name']])}")
-            
-            # Show conversation history (up to 20 messages for full context)
-            messages = active_conversation.get('messages', [])
-            if messages:
-                context_parts.append(f"\nConversation so far:")
-                for msg in messages[-20:]:
-                    context_parts.append(f"{msg['character_name']}: {msg['content']}")
-            
-            # Check if it's this character's turn
-            is_my_turn = active_conversation.get('current_turn') == str(character['_id'])
-            context_parts.append(f"\nYour turn: {is_my_turn}")
-        
-        # Trigger
-        context_parts.append(f"\nTrigger: {trigger_source}")
-        
-        context = "\n".join(context_parts)
-        
-        # Different prompt if in conversation
-        if active_conversation:
-            msg_count = len(active_conversation.get('messages', []))
-            
-            prompt = f"""{context}
-
-You are currently in a conversation ({msg_count} messages so far). Based on the conversation history and your personality, decide what to do:
-
-ACTION OPTIONS (Conversation):
-1. speak_in_conversation - Talk/dialogue (1-2 sentences)
-   props: {{"dialogue": "what you say next", "target_character": "name"}}
-
-2. fight_in_conversation - Physical confrontation (punch, shove, etc.)
-   props: {{"action": "punch/shove/tackle/grab/slap/etc", "target_character": "name"}}
-
-3. romance_in_conversation - Romantic action (kiss, flirt, embrace, etc.)
-   props: {{"action": "kiss/flirt/hold_hand/embrace/caress/etc", "target_character": "name"}}
-
-ACTION OPTIONS (End Conversation):
-4. leave_conversation - End the conversation
-   props: {{}}
-   
-3. move - Leave to go somewhere
-   props: {{"destination": "location name", "destination_type": "place/object/person"}}
-   
-4. use_object - Leave to do something else
-   props: {{"object_name": "object"}}
-
-IMPORTANT:
-- Keep conversations SHORT (3-5 exchanges)
-- After {msg_count} messages, consider if you've said what you needed
-- If conversation feels complete, choose leave/move/use_object
-- If you still have something important to say, speak briefly
-
-Respond in this EXACT format:
-
-ACTION_TYPE: [speak_in_conversation, fight_in_conversation, romance_in_conversation, leave_conversation, move, or use_object]
-PROPS: {{"dialogue": "...", "target_character": "name"}} OR {{"action": "punch/kiss/flirt/etc", "target_character": "name"}} OR {{"destination": "...", "destination_type": "place/object/person"}} OR {{}}
-DESIRE: [updated desire]
-REASONING: [one sentence]
-STATE_CHANGES:
-current_desire: [your desire]
-happiness: [0-100]"""
-        
-        else:
-            # Regular decision prompt (not in conversation)
-            prompt = f"""{context}
-
-⚠️ NOTE: This is called on every Unity change (like useEffect). You'll be called frequently - it's OK to do nothing most of the time.
-
-IMPORTANT, CRITICAL, DO NOT IGNORE. MOST OF THE TIME YOU SHOULD DO NOTHING, RETURNING NONE/NULL AS THE ACTION_TYPE AND NONE/NULL AS THE PROPS
-
-Check your LAST ACTIONS first:
-- "decided: move to X" → You're AT X now (interact with it or stay)
-- "use_object X" → Still at X (continue using or move away)
-- Otherwise → You can move or start something new
-
-ACTIONS:
-1. move - Go to location/object/person: {{"destination": "name", "destination_type": "place/object/person"}}
-2. initiate_conversation - Talk: {{"target_character": "name", "interaction_type": "dialog/fight/romance"}}
-3. use_object - Use object: {{"object_name": "name"}}
-4. wait - Do nothing
-
-RULES:
-- After "move to X", don't move to X again - interact instead
-- "continue" is for solo activities only (not conversations)
-- If content with current state, do nothing
-
-YOU MUST MOVE TO AN OBJECT, CHARACTER, OR LOCATION FIRST BEFORE YOU CAN INTERACT WITH IT OR START A CONVERSATION, SEE ACTION HISTORY FOR DETAILS.
-
-FORMAT:
-LAST_ACTION_WAS: [your last action]
-ACTION_TYPE: [move/initiate_conversation/use_object/wait]
-PROPS: {{...}}
-DESIRE: [what you want]
-REASONING: [why]
-STATE_CHANGES:
-current_desire: [desire]
-happiness: [0-100]
-energy: [0-100]"""
-
-        try:
-            response = await asyncio.wait_for(
-                asyncio.to_thread(
-                    lambda: self.client.chat.completions.create(
-                        model=self.model,
-                        max_tokens=400,
-                        messages=[{
-                            "role": "user",
-                            "content": prompt
-                        }]
-                    )
-                ),
-                timeout=30.0  # 30 second timeout
-            )
-        except asyncio.TimeoutError:
-            print(f"⚠️ LLM timeout for decision generation")
-            # Return a safe "wait" action on timeout
-            return {
-                "action": {"actionType": "wait", "props": {}},
-                "state_changes": [],
-                "reasoning": "LLM request timed out"
-            }
-        
-        text = response.choices[0].message.content
-        
-        # Check if response is valid
-        if not text:
-            print("Warning: LLM returned empty response for conversation decision")
-            return {
-                "action": {"actionType": "leave_conversation", "props": {}},
-                "state_changes": [],
-                "reasoning": "No response from LLM"
-            }
-        
-        # Parse response
-        action_type = "continue"
-        props = {}
-        desire = ""
-        reasoning = ""
-        state_changes = []
-        
-        current_section = None
-        
-        for line in text.split('\n'):
-            line = line.strip()
-            if not line:
-                continue
-            
-            # Skip the thinking fields (they help LLM but we don't need them)
-            if line.startswith('LAST_ACTION_WAS:') or line.startswith('WHERE_I_AM_NOW:'):
-                continue
-            
-            if line.startswith('ACTION_TYPE:'):
-                action_type = line.replace('ACTION_TYPE:', '').strip()
-            elif line.startswith('PROPS:'):
-                props_text = line.replace('PROPS:', '').strip()
-                try:
-                    import json
-                    props = json.loads(props_text)
-                except:
-                    props = {}
-            elif line.startswith('DESIRE:'):
-                desire = line.replace('DESIRE:', '').strip()
-            elif line.startswith('REASONING:'):
-                reasoning = line.replace('REASONING:', '').strip()
-            elif line.startswith('STATE_CHANGES:'):
-                current_section = 'changes'
-            elif current_section == 'changes' and ':' in line:
-                key, value = line.split(':', 1)
-                key = key.strip()
-                value = value.strip()
-                
-                # Try to parse as int if it's a number
-                if key in ['happiness', 'energy', 'hunger', 'hygiene', 'anger', 'sadness']:
-                    # Force convert to int for numeric fields
-                    try:
-                        value = int(value)
-                    except (ValueError, TypeError):
-                        # If conversion fails, skip this change
-                        continue
-                elif value.isdigit() or (value.startswith('-') and value[1:].isdigit()):
-                    try:
-                        value = int(value)
-                    except:
-                        pass
-                
-                state_changes.append({key: value})
-        
-        # Ensure current_desire is set
-        if desire and not any('current_desire' in change or 'currentDesire' in change for change in state_changes):
-            state_changes.insert(0, {"current_desire": desire})
-        
-        return {
-            "action": {
-                "actionType": action_type,
-                "props": props
-            },
-            "state_changes": state_changes,
-            "reasoning": reasoning or "Decision made based on context"
-        }
-        """
-        Generate a decision for what the character should do next.
-        
-        Args:
-            character: The character making the decision
-            trigger_source: What triggered this decision
-            local_context: Nearby spaces, characters, events
-            global_context: Time, weather, etc.
-            relationships: Character's relationships
-        
-        Returns:
-            Dict with:
-            - state_changes: List of {key: value} changes
-            - reasoning: Why they made this decision
-        """
-        
-        # Build comprehensive context
-        context_parts = []
-        
-        # Character identity
-        context_parts.append(f"You are {character['name']}, a {character['age']}-year-old {character['race']} {character['occupation']}.")
-        context_parts.append(f"Background: {character['background']}")
-        
-        # Personality (decision-guiding)
-        context_parts.append(f"\nPersonality & Motivations:")
-        for trait in character.get('personality_traits', []):
-            context_parts.append(f"- {trait}")
-        
-        # Current state
-        needs = character.get('needs', {})
-        context_parts.append(f"\nCurrent State:")
-        context_parts.append(f"- Happiness: {needs.get('happiness', 50)}/100")
-        context_parts.append(f"- Energy: {needs.get('energy', 50)}/100")
-        context_parts.append(f"- Hunger: {needs.get('hunger', 50)}/100")
-        context_parts.append(f"- Hygiene: {needs.get('hygiene', 50)}/100")
-        context_parts.append(f"- Anger: {needs.get('anger', 50)}/100")
-        context_parts.append(f"- Sadness: {needs.get('sadness', 50)}/100")
-        
-        if character.get('current_desire'):
-            context_parts.append(f"- Current desire: {character['current_desire']}")
-        
-        # Recent actions (show up to 20 for maximum context)
-        if character.get('action_log'):
-            context_parts.append(f"\nRecent Actions:")
-            for action in character['action_log'][-20:]:
-                context_parts.append(f"- {action['action']}: {action.get('details', '')}")
-        
-        # Memories (show up to 20 for maximum context)
-        if character.get('memory_log'):
-            context_parts.append(f"\nRecent Memories:")
-            for memory in character['memory_log'][-20:]:
-                context_parts.append(f"- {memory['event']} (felt: {memory.get('emotional_impact', 'neutral')})")
-        
-        # Relationships
-        if relationships:
-            context_parts.append(f"\nYour Relationships:")
-            for rel in relationships[:10]:  # Top 10 most relevant
-                context_parts.append(f"- {rel.get('to_character_id', 'unknown')}: {rel.get('relationship_type')} (score: {rel.get('relationship_score', 0)}/100)")
-                context_parts.append(f"  {rel.get('relationship_summary', '')}")
-        
-        # Local context
-        if local_context:
-            if local_context.get('nearby_spaces'):
-                context_parts.append(f"\nNearby Locations:")
-                for space in local_context['nearby_spaces']:
-                    context_parts.append(f"- {space['name']}")
-                    if space.get('activities_description'):
-                        context_parts.append(f"  {space['activities_description']}")
-                    if space.get('characters_present'):
-                        context_parts.append(f"  People here: {len(space['characters_present'])}")
-            
-            if local_context.get('nearby_characters'):
-                context_parts.append(f"\nNearby People:")
-                for char in local_context['nearby_characters']:
-                    context_parts.append(f"- {char['name']} ({char['occupation']})")
-            
-            if local_context.get('recent_events'):
-                context_parts.append(f"\nRecent Events You Noticed:")
-                for event in local_context['recent_events']:
-                    context_parts.append(f"- {event}")
-        
-        # Global context
-        if global_context:
-            context_parts.append(f"\nWorld State:")
-            if global_context.time_of_day:
-                context_parts.append(f"- Time: {global_context.time_of_day}")
-            if global_context.weather:
-                context_parts.append(f"- Weather: {global_context.weather}")
-            if global_context.day_number:
-                context_parts.append(f"- Day: {global_context.day_number}")
-        
-        # Trigger
-        context_parts.append(f"\nWhat just happened: {trigger_source}")
-        
-        context = "\n".join(context_parts)
-        
-        prompt = f"""{context}
-
-Based on your personality, motivations, current state, and everything happening around you, decide what ACTION to take next.
-
-Consider:
-- Your core motivation and ambition level
-- Your current needs (hungry? tired? unhappy?)
-- Your confrontational tendency (seek or avoid conflict?)
-- Your sociability (want company or solitude?)
-- Who is nearby and your relationships with them
-- What locations are available
-- Your recent memories and actions
-
-Choose ONE specific action to take RIGHT NOW.
-
-Respond in this EXACT format:
-
-ACTION: [choose one]
-- move_to: [exact space name from nearby] - if you want to go somewhere
-- talk_to: [character ID from nearby] - if you want to start a conversation
-- use_object: [object name] - if you want to interact with an object
-- wait - if you want to stay and observe
-- none - if content with current activity
-
-TARGET: [space name, character ID, or object name - based on action above]
-
-DESIRE: [What you want overall - e.g., "find someone to talk to", "rest and recover energy", "work on my craft"]
-
-REASONING: [One sentence explaining why you chose this action]
-
-STATE_CHANGES:
-current_desire: [your new desire from above]
-happiness: [+/- small change if mood shifts, or keep: {needs.get('happiness', 50)}]
-energy: [-1 to -5 if action is tiring, or keep: {needs.get('energy', 50)}]
-
-Example good response:
-ACTION: talk_to
-TARGET: 507f1f77bcf86cd799439012
-DESIRE: spend time with Isabella
-REASONING: Saw Isabella nearby and my crush motivates me to approach her
-STATE_CHANGES:
-current_desire: spend time with Isabella
-happiness: 60
-energy: {needs.get('energy', 50)}"""
-
-        response = await asyncio.to_thread(
-            lambda: self.client.chat.completions.create(
-                model=self.model,
-                max_tokens=500,
-                messages=[{
-                    "role": "user",
-                    "content": prompt
-                }]
-            )
+        prompt = self._build_decide_prompt(
+            character, trigger, space_states, 
+            global_context, nearby_relationships,
+            is_in_interaction, interaction_context
         )
         
-        text = response.choices[0].message.content
-        
-        # Check if response is valid
-        if not text:
-            print("Warning: LLM returned empty response for regular decision")
+        try:
+            kwargs = {
+                "model": self.model,
+                "max_tokens": 16000 if self.enable_thinking else 1024,
+                "messages": [{"role": "user", "content": prompt}]
+            }
+            if self.enable_thinking:
+                kwargs["thinking"] = {"type": "enabled", "budget_tokens": 10000}
+            
+            response = await self.client.messages.create(**kwargs)
+            
+            raw_text = self._extract_text(response)
+            parsed = self._parse_decision(raw_text)
+            
+            # Log LLM response
+            session_logger.log_llm_call(
+                "decide",
+                character.get("_id", "unknown"),
+                f"Action: {parsed['action']['actionType']}, Thought: {parsed.get('inner_thought', 'N/A')[:100]}"
+            )
+            
+            return parsed
+            
+        except Exception as e:
+            logger.error(f"LLM error: {e}")
             return {
-                "action": {"actionType": "wait", "props": {}},
-                "state_changes": [],
-                "reasoning": "No response from LLM"
+                "inner_thought": "Error occurred",
+                "state_changes": {},
+                "action": {"actionType": "none", "props": {}}
+            }
+    
+    def _build_decide_prompt(
+        self,
+        character: Dict,
+        trigger: str,
+        space_states: List[Dict],
+        global_context: Dict,
+        nearby_relationships: List[Dict],
+        is_in_interaction: bool,
+        interaction_context: Optional[Dict]
+    ) -> str:
+        """Build the decision prompt from context."""
+        
+        # Format feelings
+        feelings = character.get("feelings", {})
+        feelings_str = ", ".join([f"{k.title()} {v}%" for k, v in feelings.items()])
+        
+        # Format activity
+        activity = character.get("current_activity", {})
+        activity_desc = activity.get("description", "idle")
+        activity_started = activity.get("started_at", "")
+        
+        # Format action log
+        action_log = character.get("action_log", [])[-5:]
+        action_str = "\n".join([f"  - {a.get('action', '')}" for a in action_log]) or "  - (no recent actions)"
+        
+        # Format memory log
+        memory_log = character.get("memory_log", [])[-5:]
+        memory_str = "\n".join([f"  - {m.get('observation', '')}" for m in memory_log]) or "  - (no recent memories)"
+        
+        # Format relationships
+        rel_str = ""
+        for rel in nearby_relationships:
+            char_id = character["_id"]
+            other_chars = [c for c in rel.get("characters", []) if c != char_id]
+            if not other_chars:
+                continue
+            other_name = other_chars[0]
+            direction_key = f"{char_id}_to_{other_name}"
+            direction = rel.get(direction_key, {})
+            
+            status = direction.get("status", "neutral")
+            affection = direction.get("affection", 50)
+            trust = direction.get("trust", 50)
+            
+            history = rel.get("interaction_history", [])
+            last_interaction = history[-1].get("summary", "No recent interactions") if history else "No interactions yet"
+            
+            rel_str += f"- {other_name.title()}: {status}, Affection {affection}%, Trust {trust}%\n"
+            rel_str += f"  Last interaction: \"{last_interaction}\"\n"
+        
+        if not rel_str:
+            rel_str = "- No nearby characters with established relationships"
+        
+        # Format spaces
+        space_str = ""
+        for space in space_states:
+            space_str += f"Space: {space.get('space_name', '')}\n"
+            space_str += f"- People here: {', '.join(space.get('characters_present', [])) or 'none'}\n"
+            space_str += f"- Objects: {', '.join(space.get('available_objects', [])) or 'none'}\n"
+            space_str += f"- What's happening: {space.get('description', 'quiet')}\n\n"
+        
+        prompt = f"""You are {character['name']}, a {character['age']}-year-old {character['gender']} {character['race']} who works as a {character['occupation']}.
+
+## YOUR PERSONALITY
+Traits: {', '.join(character.get('personality_traits', []))}
+Ambition: {character.get('ambition_level', 50)}/100
+Confrontational: {character.get('confrontational_tendency', 50)}/100
+Core Motivations: {', '.join(character.get('core_motivations', []))}
+
+## YOUR BACKGROUND
+{character.get('background', 'No background provided')}
+
+## YOUR CURRENT STATE
+What you want: {character.get('current_desire', 'unsure')}
+Current activity: {activity_desc}
+Needs: Happiness {character['needs']['happiness']}%, Energy {character['needs']['energy']}%, Hunger {character['needs']['hunger']}%, Hygiene {character['needs']['hygiene']}%, Health {character['needs']['health']}%
+Feelings: {feelings_str}
+
+NOTE: If your current activity shows you are already doing something (like walking somewhere), you should usually choose action "none" to continue that activity unless something important requires your attention.
+
+## RECENT HISTORY
+Last 5 actions:
+{action_str}
+
+Recent memories:
+{memory_str}
+
+## RELATIONSHIPS WITH PEOPLE NEARBY
+{rel_str}
+
+NOTE: You can only initiate_interaction with people who are in the same space as you right now.
+
+## CURRENT ENVIRONMENT
+{space_str}
+
+## WORLD STATE
+Time: {global_context.get('time', 'daytime')}
+
+## KNOWN LOCATIONS IN THE VILLAGE
+You can move to any of these places or any named object/character:
+{', '.join(global_context.get('all_spaces', []))}
+
+Other characters' locations:
+{chr(10).join([f"- {loc.get('character_name')}: at {loc.get('space_name', 'unknown')}" for loc in global_context.get('character_locations', [])[:10]])}
+
+---
+
+## WHAT JUST HAPPENED
+{trigger}
+
+---
+"""
+        
+        # Add interaction context if in conversation
+        if is_in_interaction and interaction_context:
+            other_participant = [p for p in interaction_context.get("participants", []) if p != character["_id"]][0]
+            session_type = interaction_context.get("session_type", "dialog")
+            
+            prompt += f"""
+## CURRENT INTERACTION
+You are in a {session_type} with {other_participant}.
+Conversation so far:
+"""
+            turns = interaction_context.get("turns", [])
+            for turn in turns[-10:]:  # Last 10 turns
+                char = turn.get("character", "")
+                action_type = turn.get("action_type", "")
+                content = turn.get("content", "")
+                prompt += f"  {char}: [{action_type}] {content}\n"
+            
+            prompt += """
+It's your turn. You may:
+- speak (say something)
+- leave (end the interaction)
+- fight_action (punch, kick, block, etc.)
+- romance_action (kiss, hug, hold hands, etc.)
+
+"""
+        
+        prompt += """---
+
+Decide what to do based on your personality and the situation.
+
+IMPORTANT GUIDELINES:
+- If your current activity already shows you doing something (e.g., "walking to Library"), choose action "none" to CONTINUE that activity - don't re-issue the same action!
+- Only choose a NEW action if you want to CHANGE what you're doing or if you've completed/arrived somewhere.
+- When idle, actively pursue your desires - take action to achieve your goals.
+
+Respond with ONLY valid JSON:
+{
+  "inner_thought": "1-2 sentence thought process",
+  "state_changes": {
+    "current_desire": "new desire if changed, omit if unchanged",
+    "current_activity": "ONLY if starting a NEW action - describe what you're now doing in third person, e.g. 'Maria is walking to the library to find books about history'",
+    "feelings": {"anger": 10},
+    "needs": {"energy": -5},
+    "add_memory": "optional observation to remember"
+  },
+  "action": {
+    "actionType": "move|use_object|speak|initiate_interaction|speak_in_interaction|fight_action|romance_action|leave_interaction|none",
+    "props": {}
+  }
+}
+
+State changes notes:
+- current_activity: ONLY include this field when you are starting a NEW action (not "none"). Write in third person describing what you're doing and why, e.g. "Tommy is hurrying to the market to buy supplies before it closes". Do NOT include this field if choosing action "none".
+
+Action props by type:
+- move: {"destination": "market"} - destination can be a space name, object name, or character name
+- use_object: {"object_name": "sink", "flavor": "scrubbing dishes thoughtfully"}
+- speak: {"dialogue": "Hey, stop fighting!"} - write SHORT, candid, conversational dialogue that would be realistic for an active, back-and-forth conversation. Write realistially.
+- initiate_interaction: {"target_character": "sarah", "type": "dialog|fight|romance", "opening": "Hey Sarah!"}
+- speak_in_interaction: {"dialogue": "How are you doing?"}
+- fight_action: {"action": "punch|kick|block|dodge"}
+- romance_action: {"action": "kiss|hug|hold_hands"}
+- leave_interaction: {}
+- none: {} (use this to CONTINUE your current activity)
+
+CRITICAL: DO NOT REFERENCE OBJECTS, PLACES, PEOPE, ETC. THAT ARE NOT STATED TO EXIST. ALSO, INTERACT WITH OTHER CHARACTERS AS MUCH AS POSSIBLE. DON'T JUST DO SHIT ALONE! ALSO: You should actively pursue your desires! If you want to visit the market, USE THE MOVE ACTION. Don't just stand around - take action to achieve your goals.
+"""
+        
+        return prompt
+    
+    def _parse_decision(self, raw_response: str) -> Dict[str, Any]:
+        """Parse LLM response, with error handling."""
+        try:
+            # Try to extract JSON from response
+            if "```json" in raw_response:
+                start = raw_response.find("```json") + 7
+                end = raw_response.find("```", start)
+                raw_response = raw_response[start:end].strip()
+            elif "```" in raw_response:
+                start = raw_response.find("```") + 3
+                end = raw_response.find("```", start)
+                raw_response = raw_response[start:end].strip()
+            
+            data = json.loads(raw_response)
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON from LLM: {raw_response[:200]}")
+            return {
+                "inner_thought": "Error parsing response",
+                "state_changes": {},
+                "action": {"actionType": "none", "props": {}}
             }
         
-        # Parse response
-        action_type = "none"
-        action_target = None
-        desire = ""
-        reasoning = ""
-        state_changes = []
+        if "action" not in data:
+            logger.error("Missing 'action' field in LLM response")
+            return {
+                "inner_thought": data.get("inner_thought", ""),
+                "state_changes": {},
+                "action": {"actionType": "none", "props": {}}
+            }
         
-        current_section = None
-        
-        for line in text.split('\n'):
-            line = line.strip()
-            if not line:
-                continue
-            
-            if line.startswith('ACTION:'):
-                action_text = line.replace('ACTION:', '').strip()
-                # Parse "move_to: Town Square" or just "wait"
-                if ':' in action_text:
-                    action_type = action_text.split(':')[0].strip()
-                else:
-                    action_type = action_text
-            elif line.startswith('TARGET:'):
-                action_target = line.replace('TARGET:', '').strip()
-            elif line.startswith('DESIRE:'):
-                desire = line.replace('DESIRE:', '').strip()
-            elif line.startswith('REASONING:'):
-                reasoning = line.replace('REASONING:', '').strip()
-            elif line.startswith('STATE_CHANGES:'):
-                current_section = 'changes'
-            elif current_section == 'changes' and ':' in line:
-                key, value = line.split(':', 1)
-                key = key.strip()
-                value = value.strip()
-                
-                # Try to parse as int if it's a number
-                if key in ['happiness', 'energy', 'hunger', 'hygiene', 'anger', 'sadness']:
-                    # Force convert to int for numeric fields
-                    try:
-                        value = int(value)
-                    except (ValueError, TypeError):
-                        # If conversion fails, skip this change
-                        continue
-                elif value.isdigit() or (value.startswith('-') and value[1:].isdigit()):
-                    try:
-                        value = int(value)
-                    except:
-                        pass
-                
-                state_changes.append({key: value})
-        
-        # Ensure current_desire is set
-        if desire and not any('current_desire' in change or 'currentDesire' in change for change in state_changes):
-            state_changes.insert(0, {"current_desire": desire})
+        action_type = data["action"].get("actionType", "none")
+        if action_type not in VALID_ACTION_TYPES:
+            logger.warning(f"Unknown action type: {action_type}, defaulting to none")
+            action_type = "none"
         
         return {
-            "action_type": action_type,
-            "action_target": action_target,
-            "state_changes": state_changes,
-            "reasoning": reasoning or "Decision made based on context"
+            "inner_thought": data.get("inner_thought", ""),
+            "state_changes": data.get("state_changes", {}),
+            "action": {
+                "actionType": action_type,
+                "props": data["action"].get("props", {})
+            }
         }
     
-    async def generate_interaction_summary(
-        self,
-        participants,
-        messages,
-        interaction_type
-    ) -> dict:
-        """
-        Generate a detailed summary of an interaction after it ends.
+    async def summarize_interaction(self, session: Dict[str, Any]) -> str:
+        """Generate a summary of an interaction for relationship history."""
+        participants = session.get("participants", [])
+        session_type = session.get("session_type", "dialog")
+        turns = session.get("turns", [])
         
-        Returns dict with:
-        - summary: Text description of what happened
-        - emotional_impacts: Dict of how EACH character felt (per character)
-        - relationship_changes: Dict of score changes (per character pair)
-        """
+        # Build conversation history
+        convo = ""
+        for turn in turns:
+            char = turn.get("character", "")
+            content = turn.get("content", "")
+            convo += f"{char}: {content}\n"
         
-        # Build conversation transcript
-        transcript = "\n".join([
-            f"{msg['character_name']}: {msg['content']}"
-            for msg in messages
-        ])
+        prompt = f"""Summarize this {session_type} interaction between {' and '.join(participants)} in 1-2 sentences.
+Focus on what happened and the emotional/relationship impact.
+
+Conversation:
+{convo}
+
+Provide a brief summary:"""
         
-        # Build participant context
-        participant_info = []
-        for p in participants:
-            participant_info.append(f"- {p['name']}: {p['age']}yo {p['occupation']}")
-            participant_info.append(f"  Personality: {', '.join(p['personality_traits'][:3])}")
-        
-        participant_context = "\n".join(participant_info)
-        
-        prompt = f"""Analyze this {interaction_type} between these characters:
-
-{participant_context}
-
-CONVERSATION:
-{transcript}
-
-For EACH character involved, provide:
-1. A summary of what happened in this conversation (2-3 sentences)
-2. How EACH person felt emotionally during/after
-3. How this affects EACH person's feelings toward the others (relationship score change -10 to +10)
-
-Format your response EXACTLY as follows:
-
-SUMMARY: [Brief summary of what happened in the conversation]
-
-FEELINGS:
-[Character 1 name]: [how they felt - be specific, e.g., "annoyed but amused", "happy and hopeful", "frustrated", etc.]
-[Character 2 name]: [how they felt]
-[Continue for all characters...]
-
-RELATIONSHIP_CHANGES:
-[Character A] -> [Character B]: [+5 or -3, etc.]
-[Character B] -> [Character A]: [+2 or -5, etc.]
-[Continue for all pairs...]
-
-IMPORTANT:
-- Relationship changes can be DIFFERENT in each direction (A might like B more, but B might like A less)
-- Base changes on the conversation content and personalities
-- Positive interactions: +2 to +10
-- Neutral interactions: -1 to +2
-- Negative interactions: -10 to -2"""
-
         try:
-            response = await asyncio.wait_for(
-                asyncio.to_thread(
-                    lambda: self.client.chat.completions.create(
-                        model=self.model,
-                        max_tokens=800,
-                        messages=[{
-                            "role": "user",
-                            "content": prompt
-                        }]
-                    )
-                ),
-                timeout=30.0  # 30 second timeout
-            )
-        except asyncio.TimeoutError:
-            print(f"⚠️ LLM timeout for interaction summary")
-            return {
-                "summary": f"Had a {interaction_type} conversation",
-                "emotional_impacts": {},
-                "relationship_changes": {}
+            kwargs = {
+                "model": self.model,
+                "max_tokens": 10000 if self.enable_thinking else 1024,
+                "messages": [{"role": "user", "content": prompt}]
             }
+            if self.enable_thinking:
+                kwargs["thinking"] = {"type": "enabled", "budget_tokens": 4000}
+            
+            response = await self.client.messages.create(**kwargs)
+            return self._extract_text(response).strip()
+        except Exception as e:
+            logger.error(f"Error summarizing interaction: {e}")
+            return f"{session_type.title()} between {' and '.join(participants)}"
+    
+    async def generate_space_context(
+        self,
+        space_name: str,
+        characters: List[str],
+        objects: List[str],
+        previous_activities: List[str]
+    ) -> str:
+        """Generate/update space description."""
         
-        text = response.choices[0].message.content
+        prompt = f"""Generate a brief, atmospheric description of what's happening in {space_name}.
+
+Present: {', '.join(characters) if characters else 'empty'}
+Objects: {', '.join(objects) if objects else 'none'}
+Previous activities: {', '.join(previous_activities) if previous_activities else 'none'}
+
+Create a 1-2 sentence description capturing the current atmosphere and activities. Be concise and evocative."""
         
-        # Check if response is valid
-        if not text:
-            print("Warning: LLM returned empty response for interaction summary")
-            return {
-                "summary": "Had a conversation",
-                "emotional_impacts": {},
-                "relationship_changes": {}
+        try:
+            kwargs = {
+                "model": self.model,
+                "max_tokens": 100000 if self.enable_thinking else 1024,
+                "messages": [{"role": "user", "content": prompt}]
             }
-        
-        # Parse response
-        summary = ""
-        emotional_impacts = {}
-        relationship_changes = {}
-        
-        current_section = None
-        
-        for line in text.split('\n'):
-            line = line.strip()
-            if not line:
-                continue
-                
-            if line.startswith('SUMMARY:'):
-                summary = line.replace('SUMMARY:', '').strip()
-                current_section = 'summary'
-            elif line.startswith('FEELINGS:'):
-                current_section = 'feelings'
-            elif line.startswith('RELATIONSHIP_CHANGES:'):
-                current_section = 'changes'
-            elif current_section == 'feelings' and ':' in line:
-                char_name, feeling = line.split(':', 1)
-                emotional_impacts[char_name.strip()] = feeling.strip()
-            elif current_section == 'changes' and '->' in line and ':' in line:
-                # Parse "Character A -> Character B: +5"
-                parts = line.split(':')
-                if len(parts) >= 2:
-                    relationship_pair = parts[0].strip()
-                    change_value = parts[1].strip()
-                    
-                    try:
-                        change = int(change_value.replace('+', ''))
-                        relationship_changes[relationship_pair] = change
-                    except:
-                        pass
-        
-        # If parsing failed, use fallback
-        if not summary:
-            summary = text[:300] if text else f"Had a {interaction_type} conversation"
-        
-        return {
-            "summary": summary,
-            "emotional_impacts": emotional_impacts,
-            "relationship_changes": relationship_changes
-        }
+            if self.enable_thinking:
+                kwargs["thinking"] = {"type": "enabled", "budget_tokens": 2000}
+            
+            response = await self.client.messages.create(**kwargs)
+            return self._extract_text(response).strip()
+        except Exception as e:
+            logger.error(f"Error generating space context: {e}")
+            return f"{space_name} is quiet."
 
 
-# Singleton instance
-_llm_service = None
+# Global instance
+_llm_service: Optional[LLMService] = None
+
 
 def get_llm_service() -> LLMService:
-    """Get the LLM service singleton."""
+    """Get or create the LLM service instance."""
     global _llm_service
     if _llm_service is None:
         _llm_service = LLMService()

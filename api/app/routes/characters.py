@@ -1,582 +1,340 @@
-from fastapi import APIRouter, HTTPException, status
-from typing import List, Optional
-from bson import ObjectId
+from fastapi import APIRouter, HTTPException
+from typing import List, Dict, Any
 from datetime import datetime
-from app.database import get_database
-from app.routes.interaction_sessions import end_interaction as end_conversation_helper
-from app.models.character import (
-    Character,
-    CharacterCreate,
-    CharacterUpdate,
-    DesireUpdate,
-    ActionLogEntry,
-    MemoryLogEntry,
-    Needs,
-    Position
-)
-from app.models.decision import (
-    DecisionRequest,
-    DecisionResponse,
-    SpaceState,
-    GlobalContext,
-    ActionOutput
-)
-from app.services.llm_service import get_llm_service
-from pydantic import BaseModel
+import logging
 
+from ..models import (
+    DecideRequest, DecideResponse, Action, ActionType,
+    ActivityUpdateRequest, ActivityUpdateResponse
+)
+from ..services.character_service import get_character_service
+from ..services.relationship_service import get_relationship_service
+from ..services.interaction_service import get_interaction_service
+from ..services.llm_service import get_llm_service
+from ..logger_middleware import get_session_logger
+
+logger = logging.getLogger(__name__)
+session_logger = get_session_logger()
 router = APIRouter(prefix="/characters", tags=["characters"])
 
 
-def character_helper(character) -> dict:
-    """Convert MongoDB document to dict."""
-    if character:
-        character["_id"] = str(character["_id"])
-        return character
-    return None
-
-
-@router.get("/", response_model=List[Character])
-async def list_characters():
-    """List all characters."""
-    db = get_database()
-    characters = []
+def name_to_id(name: str) -> str:
+    """Convert character display name to ID format.
     
-    async for character in db.characters.find():
-        characters.append(character_helper(character))
+    LLM and Unity use display names like "Lily Park" but database stores
+    character IDs like "lily_park". This function converts between formats.
+    """
+    return name.lower().replace(" ", "_")
+
+
+@router.get("")
+async def get_characters() -> List[Dict[str, Any]]:
+    """Get all characters for Unity spawning."""
+    # Start new logging session when Unity connects
+    session_logger.start_new_session()
+    session_logger.log("UNITY CONNECTED", "Unity requested character list - Starting new session")
+    
+    character_service = get_character_service()
+    characters = await character_service.get_all()
+    
+    session_logger.log("CHARACTERS LOADED", f"Loaded {len(characters)} characters", {
+        "character_names": [c.get('name') for c in characters]
+    })
     
     return characters
 
 
-@router.get("/{character_id}", response_model=Character)
-async def get_character(character_id: str):
-    """Get a specific character by ID."""
-    db = get_database()
-    
-    if not ObjectId.is_valid(character_id):
-        raise HTTPException(status_code=400, detail="Invalid character ID format")
-    
-    character = await db.characters.find_one({"_id": ObjectId(character_id)})
+@router.get("/{character_id}")
+async def get_character(character_id: str) -> Dict[str, Any]:
+    """Get a single character by ID."""
+    character_service = get_character_service()
+    character = await character_service.get_by_id(character_id)
     
     if not character:
         raise HTTPException(status_code=404, detail="Character not found")
     
-    return character_helper(character)
+    return character
 
 
-class ObjectUseResponse(BaseModel):
-    """Response from using an object."""
-    character_name: str
-    object_name: str
-    flavor_text: str
-    timestamp: datetime
-
-
-@router.post("/{character_id}/use/{object_name}", response_model=ObjectUseResponse)
-async def use_object(character_id: str, object_name: str):
+@router.post("/{character_id}/decide")
+async def decide(character_id: str, request: DecideRequest) -> DecideResponse:
     """
-    Character interacts with an object.
-    LLM generates contextual emoji flavor text based on character personality and object.
-    
-    Note: No space_id needed - Unity manages all spatial data.
+    Core decision endpoint. Handles both normal decisions and interaction turns.
     """
-    db = get_database()
+    # Log the decision request
+    session_logger.log_decision(character_id, request.trigger_source, request.priority)
     
-    if not ObjectId.is_valid(character_id):
-        raise HTTPException(status_code=400, detail="Invalid character ID format")
+    character_service = get_character_service()
+    relationship_service = get_relationship_service()
+    interaction_service = get_interaction_service()
+    llm_service = get_llm_service()
     
     # Get character
-    character = await db.characters.find_one({"_id": ObjectId(character_id)})
+    character = await character_service.get_by_id(character_id)
     if not character:
+        session_logger.log_error("NOT_FOUND", f"Character {character_id} not found")
         raise HTTPException(status_code=404, detail="Character not found")
     
-    # Generate flavor text using LLM (no space info needed)
-    llm = get_llm_service()
+    # Check for active session
+    active_session = await interaction_service.get_active_session(character_id)
     
-    try:
-        flavor_text = await llm.generate_object_interaction(
-            character=character,
-            object_name=object_name
+    # Handle interrupts (Critical priority while in interaction)
+    if active_session and request.priority >= 3:  # Critical
+        # For now, always interrupt on critical
+        # Could add LLM-based should_interrupt check here
+        logger.info(f"Interrupting session {active_session['_id']} for critical trigger")
+        session_logger.log_interaction("INTERRUPTED", active_session['_id'], 
+                                     active_session.get('participants', []),
+                                     {"reason": "critical trigger", "trigger": request.trigger_source})
+        await interaction_service.end_session(
+            active_session["_id"],
+            reason="interrupted"
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"LLM generation failed: {str(e)}")
+        active_session = None
     
-    # Add to action log
-    timestamp = datetime.utcnow()
-    action_entry = {
-        "timestamp": timestamp,
-        "action": "use_object",
-        "details": f"Used {object_name}: {flavor_text}"
-    }
+    # INTERACTION MODE
+    if active_session:
+        session_logger.log("MODE", f"{character_id} processing in INTERACTION mode", {
+            "session_id": active_session['_id'],
+            "session_type": active_session.get('session_type')
+        })
+        response = await _process_interaction_turn(
+            character, active_session, request, 
+            character_service, interaction_service, llm_service
+        )
+        session_logger.log_action(character_id, response.action.actionType.value, response.action.props)
+        return response
     
-    await db.characters.update_one(
-        {"_id": ObjectId(character_id)},
-        {"$push": {"action_log": action_entry}}
+    # NORMAL MODE
+    session_logger.log("MODE", f"{character_id} processing in NORMAL mode")
+    response = await _process_normal_decision(
+        character, request,
+        character_service, relationship_service, interaction_service, llm_service
+    )
+    session_logger.log_action(character_id, response.action.actionType.value, response.action.props)
+    return response
+
+
+async def _process_interaction_turn(
+    character: Dict,
+    session: Dict,
+    request: DecideRequest,
+    character_service,
+    interaction_service,
+    llm_service
+) -> DecideResponse:
+    session_logger.log("INTERACTION TURN", f"Processing turn for {character['_id']} in session {session['_id'][:8]}...")
+    """Process a turn within an interaction."""
+    
+    # Get nearby relationships (for context building)
+    # Unity sends display names (e.g., "Lily Park") but we need IDs (e.g., "lily_park")
+    relationship_service = get_relationship_service()
+    nearby_char_names = []
+    for space in request.space_states:
+        nearby_char_names.extend(space.characters_present)
+    nearby_char_ids = list(set([name_to_id(c) for c in nearby_char_names if name_to_id(c) != character["_id"]]))
+    
+    nearby_relationships = await relationship_service.get_relationships_for_nearby(
+        character["_id"], nearby_char_ids
     )
     
-    # Return response
-    return ObjectUseResponse(
-        character_name=character["name"],
-        object_name=object_name,
-        flavor_text=flavor_text,
-        timestamp=timestamp
+    # Get LLM decision
+    llm_response = await llm_service.decide(
+        character,
+        request.trigger_source,
+        [s.model_dump() for s in request.space_states],
+        request.global_context.model_dump(),
+        nearby_relationships,
+        is_in_interaction=True,
+        interaction_context=session
     )
-
-
-from app.models.interaction_session import StartInteractionRequest
-from app.routes.interaction_sessions import start_interaction
-
-@router.post("/{character_id}/decide", response_model=DecisionResponse)
-async def decide(character_id: str, request: DecisionRequest):
-    """
-    .decide() - AI-powered character decision making for Unity.
-    
-    Handles ALL decisions including:
-    - Regular actions (move, talk, use object)
-    - Conversation continuation (if in active conversation)
-    - Leaving conversations
-    
-    Character evaluates their context (can perceive multiple spaces) and decides what action to take.
-    Returns both state changes AND an action for Unity to execute.
-    """
-    db = get_database()
-    
-    if not ObjectId.is_valid(character_id):
-        raise HTTPException(status_code=400, detail="Invalid character ID format")
-    
-    # Get character
-    character = await db.characters.find_one({"_id": ObjectId(character_id)})
-    if not character:
-        raise HTTPException(status_code=404, detail="Character not found")
-    
-    # Check if character is in an active conversation
-    active_session = await db.interaction_sessions.find_one({
-        "participants": character_id,
-        "is_active": True
-    })
-    
-    # Collect all nearby characters from ALL visible spaces (perception radius)
-    nearby_characters = []
-    all_nearby_char_names = set()
-    
-    for space_state in request.space_states:
-        all_nearby_char_names.update(space_state.characters_present)
-    
-    # Look up character data for all nearby people
-    for char_name in all_nearby_char_names:
-        if char_name != character['name']:  # Exclude self
-            char = await db.characters.find_one({"name": char_name})
-            if char:
-                nearby_characters.append(char)
-            else:
-                print(f"Warning: Could not find character by name: '{char_name}'")
-    
-    # Get character's relationships (bidirectional)
-    relationships = []
-    async for rel in db.relationships.find({
-        "$or": [
-            {"character_id_1": character_id},
-            {"character_id_2": character_id}
-        ]
-    }):
-        relationships.append(rel)
-    
-    # Generate decision using LLM
-    llm = get_llm_service()
-    
-    try:
-        decision_result = await llm.generate_decision_for_unity(
-            character=character,
-            trigger_source=request.trigger_source,
-            space_states=request.space_states,
-            global_context=request.global_context,
-            relationships=relationships,
-            nearby_characters=nearby_characters,
-            active_conversation=active_session  # Pass conversation context if in one
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"LLM generation failed: {str(e)}")
     
     # Apply state changes
-    state_changes = decision_result["state_changes"]
-    update_data = {}
+    if llm_response.get("state_changes"):
+        await character_service.update_state(character["_id"], llm_response["state_changes"])
     
-    for change in state_changes:
-        for key, value in change.items():
-            # Map keys to database fields
-            if key == "current_desire" or key == "currentDesire":
-                update_data["current_desire"] = value
-            elif key in ["happiness", "energy", "hunger", "hygiene", "anger", "sadness"]:
-                # Convert to int if it's a string
-                try:
-                    int_value = int(value) if isinstance(value, str) else value
-                    update_data[f"needs.{key}"] = max(0, min(100, int_value))
-                except (ValueError, TypeError):
-                    # Skip invalid values
-                    continue
-            elif key.startswith("needs."):
-                # Direct needs update
-                need_key = key.replace("needs.", "")
-                if need_key in ["happiness", "energy", "hunger", "hygiene", "anger", "sadness"]:
-                    try:
-                        int_value = int(value) if isinstance(value, str) else value
-                        update_data[key] = max(0, min(100, int_value))
-                    except (ValueError, TypeError):
-                        # Skip invalid values
-                        continue
+    action = llm_response["action"]
+    action_type = action["actionType"]
     
-    # Update character in database
-    if update_data:
-        await db.characters.update_one(
-            {"_id": ObjectId(character_id)},
-            {"$set": update_data}
+    # Add turn to session
+    content = action.get("props", {}).get("dialogue", "") or action.get("props", {}).get("action", "")
+    await interaction_service.add_turn(
+        session["_id"],
+        character["_id"],
+        action_type,
+        content
+    )
+    
+    # Handle leave
+    if action_type == "leave_interaction":
+        session_logger.log_interaction("ENDING", session["_id"], session.get("participants", []),
+                                     {"reason": "left", "by": character["_id"]})
+        summary = await interaction_service.end_session(session["_id"], reason="left")
+        
+        return DecideResponse(
+            status="ok",
+            inner_thought=llm_response.get("inner_thought"),
+            state_changes=llm_response.get("state_changes"),
+            action=Action(**action),
+            session_id=session["_id"]
         )
     
-    # Add decision to action log with detailed information
-    action_obj = decision_result.get("action", {"actionType": "continue", "props": {}})
-    action_type = action_obj.get('actionType', 'none')
-    props = action_obj.get('props', {})
-    reasoning = decision_result.get('reasoning', '')
+    # Continue interaction - update turn and return with next_turn
+    participants = session.get("participants", [])
+    next_char = [p for p in participants if p != character["_id"]][0]
     
-    # Create descriptive action string
-    action_description = action_type
-    # Track if we handled the action internally (to avoid double-processing)
-    action_handled = False
+    await interaction_service.update_current_turn(session["_id"], next_char)
+    
+    return DecideResponse(
+        status="ok",
+        inner_thought=llm_response.get("inner_thought"),
+        state_changes=llm_response.get("state_changes"),
+        action=Action(**action),
+        session_id=session["_id"],
+        next_turn=next_char
+    )
 
+
+async def _process_normal_decision(
+    character: Dict,
+    request: DecideRequest,
+    character_service,
+    relationship_service,
+    interaction_service,
+    llm_service
+) -> DecideResponse:
+    """Process a normal (non-interaction) decision."""
+    
+    # Get nearby relationships for context
+    # Unity sends display names (e.g., "Lily Park") but we need IDs (e.g., "lily_park")
+    nearby_char_names = []
+    for space in request.space_states:
+        nearby_char_names.extend(space.characters_present)
+    nearby_char_ids = list(set([name_to_id(c) for c in nearby_char_names if name_to_id(c) != character["_id"]]))
+    
+    nearby_relationships = await relationship_service.get_relationships_for_nearby(
+        character["_id"], nearby_char_ids
+    )
+    
+    # Get LLM decision
+    llm_response = await llm_service.decide(
+        character,
+        request.trigger_source,
+        [s.model_dump() for s in request.space_states],
+        request.global_context.model_dump(),
+        nearby_relationships,
+        is_in_interaction=False,
+        interaction_context=None
+    )
+    
+    # Apply state changes
+    if llm_response.get("state_changes"):
+        session_logger.log_state_change(character["_id"], llm_response["state_changes"])
+        await character_service.update_state(character["_id"], llm_response["state_changes"])
+    
+    action = llm_response["action"]
+    action_type = action["actionType"]
+    
+    # Log action
+    action_desc = f"{action_type}"
     if action_type == "move":
-        destination = props.get('destination', 'unknown')
-        destination_type = props.get('destination_type', 'unknown')
-        action_description = f"move to {destination} ({destination_type})"
-        action_handled = True  # Move is handled here (memory log below)
-        
-    elif action_type == "initiate_conversation":
-        target = props.get('target_character', 'unknown')
-        interaction_type = props.get('interaction_type', 'dialog')
-        action_description = f"initiate {interaction_type} with {target}"
-        
-        # AUTOMATICALLY START CONVERSATION INTERNALLY
-        print(f"🤖 Handling initiate_conversation internally for {character['name']} -> {target}")
-        
-        # Look up target character
-        # Try exact match first
-        target_char = await db.characters.find_one({"name": target})
-        if not target_char:
-            # Try case-insensitive
-            target_char = await db.characters.find_one({"name": {"$regex": f"^{target}$", "$options": "i"}})
-            
-        if target_char:
-            target_id = str(target_char["_id"])
-            
-            try:
-                # Start the session
-                session_request = StartInteractionRequest(
-                    character_ids=[character_id, target_id],
-                    interaction_type=interaction_type
-                )
-                
-                # Create session (this also handles relationship creation)
-                session_result = await start_interaction(session_request)
-                session_id = session_result["_id"]
-                
-                print(f"✅ Auto-started session {session_id}")
-                
-                # NOW GENERATE FIRST MESSAGE IMMEDIATELY
-                
-                # Get active session
-                active_session = await db.interaction_sessions.find_one({"_id": ObjectId(session_id)})
-                
-                # Generate first message using conversation logic
-                decision_result_convo = await llm.generate_decision_for_unity(
-                    character=character,
-                    trigger_source="started conversation",
-                    space_states=request.space_states,
-                    global_context=request.global_context,
-                    relationships=relationships,
-                    nearby_characters=nearby_characters,
-                    active_conversation=active_session
-                )
-                
-                # Extract the speak action
-                convo_action = decision_result_convo.get("action", {})
-                
-                if convo_action.get("actionType") in ["speak_in_conversation", "fight_in_conversation", "romance_in_conversation"]:
-                    print(f"🗣️ Replacing initiate with {convo_action.get('actionType')}")
-                    
-                    # Update the action object to return THIS instead of initiate_conversation
-                    action_obj = convo_action
-                    
-                    # Add the message to the session
-                    if convo_action.get("actionType") == "speak_in_conversation":
-                        dialogue = convo_action.get("props", {}).get("dialogue", "")
-                        message = {
-                            "timestamp": datetime.utcnow(),
-                            "character_id": character_id,
-                            "character_name": character["name"],
-                            "action": "talk",
-                            "content": dialogue
-                        }
-                    elif convo_action.get("actionType") == "fight_in_conversation":
-                        action_name = convo_action.get("props", {}).get("action", "attack")
-                        message = {
-                            "timestamp": datetime.utcnow(),
-                            "character_id": character_id,
-                            "character_name": character["name"],
-                            "action": "fight",
-                            "content": action_name
-                        }
-                    elif convo_action.get("actionType") == "romance_in_conversation":
-                        action_name = convo_action.get("props", {}).get("action", "romance")
-                        message = {
-                            "timestamp": datetime.utcnow(),
-                            "character_id": character_id,
-                            "character_name": character["name"],
-                            "action": "romance",
-                            "content": action_name
-                        }
-                    
-                    await db.interaction_sessions.update_one(
-                        {"_id": ObjectId(session_id)},
-                        {"$push": {"messages": message}}
-                    )
-                    
-                    # Force update action_type local var for correct logging/logic
-                    action_type = convo_action.get("actionType")
-                    
-                    # IMPORTANT: Mark as handled so we don't add it again below
-                    action_handled = True
-                    
-                else:
-                    # Fallback logic...
-                    print(f"❌ AI returned {convo_action.get('actionType')} instead of speak/fight/romance. Forcing speak.")
-                    action_obj = {
-                        "actionType": "speak_in_conversation",
-                        "props": {"dialogue": f"Hello {target}."}
-                    }
-                    action_type = "speak_in_conversation"
-                    
-                    message = {
-                        "timestamp": datetime.utcnow(),
-                        "character_id": character_id,
-                        "character_name": character["name"],
-                        "action": "talk",
-                        "content": f"Hello {target}."
-                    }
-                    await db.interaction_sessions.update_one(
-                        {"_id": ObjectId(session_id)},
-                        {"$push": {"messages": message}}
-                    )
-                    action_handled = True
-                    
-            except Exception as e:
-                print(f"❌ Failed to auto-start conversation: {e}")
-                import traceback
-                traceback.print_exc()
-                # Fallback if critical failure
-                action_obj = {
-                    "actionType": "wait",
-                    "props": {}
-                }
-                action_handled = True
-        else:
-            print(f"❌ Target character '{target}' not found in DB")
-            action_obj = {
-                "actionType": "wait",
-                "props": {}
-            }
-            action_handled = True
-            
+        action_desc += f" to {action.get('props', {}).get('destination', 'unknown')}"
     elif action_type == "use_object":
-        object_name = props.get('object_name', 'unknown')
-        action_description = f"use_object {object_name}"
+        action_desc += f" with {action.get('props', {}).get('object_name', 'unknown')}"
+    elif action_type == "initiate_interaction":
+        action_desc += f" with {action.get('props', {}).get('target_character', 'unknown')}"
     
-    # Create detailed log entry
-    await db.characters.update_one(
-        {"_id": ObjectId(character_id)},
-        {"$push": {"action_log": {
-            "timestamp": datetime.utcnow(),
-            "action": action_description,
-            "details": f"AI Decision: {reasoning}"
-        }}}
-    )
+    session_logger.log("ACTION LOGGED", f"{character['_id']}: {action_desc}")
+    await character_service.add_action_log(character["_id"], action_desc)
     
-    # Add memory log entry when moving to a space (to remember what they saw)
-    if action_type == "move":
-        destination = props.get('destination', '')
+    # Handle initiate_interaction
+    if action_type == "initiate_interaction":
+        target_character_name = action["props"].get("target_character")
+        interaction_type = action["props"].get("type", "dialog")
         
-        # Find the space description for the destination
-        space_description = None
-        for space_state in request.space_states:
-            # Check if destination matches space name or if it's an object/person in the space
-            if space_state.space_name.lower() == destination.lower():
-                space_description = space_state.description
-                break
-            # Also check if destination is a character or object in this space
-            elif (destination in space_state.characters_present or 
-                  destination in space_state.available_objects):
-                space_description = space_state.description
-                break
+        if not target_character_name:
+            logger.error("initiate_interaction missing target_character")
+            return DecideResponse(
+                status="ok",
+                action=Action(actionType=ActionType.NONE, props={})
+            )
         
-        # Add memory of entering/approaching the space
-        if space_description:
-            memory_event = f"Moved to {destination}. Observed: {space_description}"
-        else:
-            memory_event = f"Moved to {destination}"
+        # Convert display name to character ID format
+        # LLM outputs names like "Lily Park" but database stores IDs like "lily_park"
+        target_character_id = name_to_id(target_character_name)
         
-        await db.characters.update_one(
-            {"_id": ObjectId(character_id)},
-            {"$push": {"memory_log": {
-                "timestamp": datetime.utcnow(),
-                "event": memory_event,
-                "emotional_impact": "neutral"
-            }}}
+        # Create context snapshot
+        context_snapshot = {
+            "space": request.space_states[0].space_name if request.space_states else "unknown",
+            "time": request.global_context.time,
+            "nearby_characters": nearby_char_ids
+        }
+        
+        # Try to create session atomically
+        session_id = await interaction_service.create_session_atomic(
+            character["_id"],
+            target_character_id,
+            interaction_type,
+            context_snapshot
+        )
+        
+        if session_id is None:
+            # Target was unavailable
+            session_logger.log("INTERACTION BLOCKED", 
+                f"{character['_id']} → {target_character_id}: target unavailable or already in interaction")
+            return DecideResponse(
+                status="target_unavailable",
+                reason=f"{target_character_name} is already in an interaction",
+                action=Action(actionType=ActionType.NONE, props={})
+            )
+        
+        # Success - log the session creation with next_turn info
+        session_logger.log_interaction("STARTED", session_id, 
+            [character["_id"], target_character_id],
+            {"type": interaction_type, "next_turn": target_character_id})
+        
+        # Success - return with session info
+        # next_turn uses ID format for consistency (Unity's FindCharacter handles both)
+        return DecideResponse(
+            status="ok",
+            inner_thought=llm_response.get("inner_thought"),
+            state_changes=llm_response.get("state_changes"),
+            action=Action(**action),
+            session_id=session_id,
+            next_turn=target_character_id
         )
     
-    # Handle conversation actions (ONLY if not already handled above)
-    if active_session and not action_handled:
-        action_type = action_obj.get("actionType")
-        
-        if action_type == "speak_in_conversation":
-            # Dialogue - add talk message
-            dialogue = action_obj.get("props", {}).get("dialogue", "")
-            if dialogue:
-                message = {
-                    "timestamp": datetime.utcnow(),
-                    "character_id": character_id,
-                    "character_name": character["name"],
-                    "action": "talk",
-                    "content": dialogue
-                }
-                
-                await db.interaction_sessions.update_one(
-                    {"_id": ObjectId(active_session["_id"])},
-                    {"$push": {"messages": message}}
-                )
-                
-                print(f"💬 {character['name']} spoke in conversation.")
-        
-        elif action_type == "fight_in_conversation":
-            # Physical confrontation - add fight message
-            fight_action = action_obj.get("props", {}).get("action", "attacks")
-            message = {
-                "timestamp": datetime.utcnow(),
-                "character_id": character_id,
-                "character_name": character["name"],
-                "action": "fight",
-                "content": fight_action
-            }
-            
-            await db.interaction_sessions.update_one(
-                {"_id": ObjectId(active_session["_id"])},
-                {"$push": {"messages": message}}
-            )
-            
-            print(f"👊 {character['name']} used {fight_action} in fight.")
-        
-        elif action_type == "romance_in_conversation":
-            # Romantic action - add romance message
-            romance_action = action_obj.get("props", {}).get("action", "romantic_gesture")
-            message = {
-                "timestamp": datetime.utcnow(),
-                "character_id": character_id,
-                "character_name": character["name"],
-                "action": "romance",
-                "content": romance_action
-            }
-            
-            await db.interaction_sessions.update_one(
-                {"_id": ObjectId(active_session["_id"])},
-                {"$push": {"messages": message}}
-            )
-            
-            print(f"💕 {character['name']} performed {romance_action}.")
-        
-        elif action_type == "leave_conversation":
-            # Explicitly leaving - end conversation
-            await end_conversation_helper(active_session["_id"], db)
-        
-        else:
-            # Any other action (move, use_object, wait) while in conversation = implicit leave
-            print(f"{character['name']} chose {action_type} while in conversation - ending conversation")
-            await end_conversation_helper(active_session["_id"], db)
-    
-    return DecisionResponse(
-        character_name=character["name"],
-        trigger_source=request.trigger_source,
-        state_changes=state_changes,
-        action=ActionOutput(**action_obj),
-        reasoning=decision_result.get("reasoning"),
-        timestamp=datetime.utcnow()
+    # Normal action
+    return DecideResponse(
+        status="ok",
+        inner_thought=llm_response.get("inner_thought"),
+        state_changes=llm_response.get("state_changes"),
+        action=Action(**action)
     )
 
 
-class CharacterPosition(BaseModel):
-    """Schema for a character's position."""
-    character_id: str
-    position: Position
-
-
-class SaveAllPositionsRequest(BaseModel):
-    """Schema for saving all character positions (called by Unity on shutdown)."""
-    positions: List[CharacterPosition]
-
-
-class SaveAllPositionsResponse(BaseModel):
-    """Response from saving all character positions."""
-    updated_count: int
-    failed_count: int
-    message: str
-
-
-@router.post("/save-positions", response_model=SaveAllPositionsResponse)
-async def save_all_positions(request: SaveAllPositionsRequest):
-    """
-    Save positions for all characters.
-    Unity calls this endpoint when shutting down to persist character positions.
+@router.post("/{character_id}/activity")
+async def update_activity(
+    character_id: str,
+    request: ActivityUpdateRequest
+) -> ActivityUpdateResponse:
+    """Update character's current activity."""
+    session_logger.log("ACTIVITY UPDATE", f"{character_id}: {request.activity_type}", {
+        "target": request.target,
+        "description": request.description
+    })
     
-    This allows Unity to manage all positions during runtime and only save them
-    when necessary (shutdown, checkpoint, etc.).
-    """
-    db = get_database()
-    updated_count = 0
-    failed_count = 0
+    character_service = get_character_service()
     
-    for char_pos in request.positions:
-        try:
-            # Validate character ID
-            if not ObjectId.is_valid(char_pos.character_id):
-                print(f"Warning: Invalid character ID format: {char_pos.character_id}")
-                failed_count += 1
-                continue
-            
-            # Update character position
-            result = await db.characters.update_one(
-                {"_id": ObjectId(char_pos.character_id)},
-                {"$set": {
-                    "position.x": char_pos.position.x,
-                    "position.y": char_pos.position.y
-                }}
-            )
-            
-            if result.modified_count > 0:
-                updated_count += 1
-            else:
-                # Character might not exist or position didn't change
-                character_exists = await db.characters.find_one({"_id": ObjectId(char_pos.character_id)})
-                if not character_exists:
-                    print(f"Warning: Character not found: {char_pos.character_id}")
-                    failed_count += 1
-                else:
-                    # Position didn't change, still count as success
-                    updated_count += 1
-                    
-        except Exception as e:
-            print(f"Error updating position for character {char_pos.character_id}: {str(e)}")
-            failed_count += 1
-    
-    total = updated_count + failed_count
-    
-    return SaveAllPositionsResponse(
-        updated_count=updated_count,
-        failed_count=failed_count,
-        message=f"Updated {updated_count}/{total} character positions successfully"
+    # Update activity in database
+    activity = await character_service.update_activity(
+        character_id,
+        request.activity_type,
+        request.target,
+        request.description
     )
-
+    
+    return ActivityUpdateResponse(
+        status="ok",
+        current_activity=activity
+    )

@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import connect_to_mongo, close_mongo_connection
-from app.routes import characters, relationships, interaction_sessions, context
+from .database import connect_to_mongo, close_mongo_connection
+from .routes import characters, context, interactions, generation, reset
 
 app = FastAPI(
-    title="AI Life Simulation API",
-    description="Backend API for AI-powered life simulation with characters, relationships, and spaces",
+    title="AI Village Simulation API",
+    description="Backend API for AI-powered village simulation with characters, relationships, and interactions",
     version="1.0.0"
 )
 
@@ -33,16 +33,17 @@ async def shutdown_db_client():
 
 # Include routers
 app.include_router(characters.router)
-app.include_router(relationships.router)
-app.include_router(interaction_sessions.router)
 app.include_router(context.router)
+app.include_router(interactions.router)
+app.include_router(generation.router)
+app.include_router(reset.router)
 
 
 @app.get("/")
 async def root():
     """Root endpoint - API health check."""
     return {
-        "message": "AI Life Simulation API",
+        "message": "AI Village Simulation API",
         "status": "running",
         "docs": "/docs"
     }

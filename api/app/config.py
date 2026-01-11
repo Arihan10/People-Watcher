@@ -1,26 +1,21 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
+from pydantic_settings import BaseSettings
+from functools import lru_cache
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
     
-    mongo_db_uri: str = "mongodb://localhost:27017/ai_life_sim"
-    database_name: str = "ai_life_sim"
+    anthropic_api_key: str
+    mongo_uri: str = "mongodb://localhost:27017/village_sim"
+    enable_thinking: bool = False  # Enable extended thinking for Claude Opus 4.5
     
-    # Optional API keys for future LLM integration
-    cerebras_api_key: Optional[str] = None
-    anthropic_api_key: Optional[str] = None
-    gemini_api_key: Optional[str] = None
-    openai_api_key: Optional[str] = None
-    
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore"  # Ignore any extra fields in .env
-    )
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
+        extra = "ignore"  # Ignore extra fields from .env (like old API keys)
 
 
-settings = Settings()
-
+@lru_cache()
+def get_settings() -> Settings:
+    """Get cached settings instance."""
+    return Settings()
