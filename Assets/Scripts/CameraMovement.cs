@@ -22,6 +22,10 @@ public class CameraMovement : MonoBehaviour
     public Vector3 followOffset = new Vector3(0, 0, -4f); // Offset from character when following
     public float smoothSpeed = 5f;
 
+    [Header("UI")]
+    public UIPanel name;
+    public UIPanel description;
+
     private Transform targetToFollow;
     private bool isFollowing = false;
 
@@ -62,6 +66,8 @@ public class CameraMovement : MonoBehaviour
                 Debug.Log($"Successfully hit character: {hit.transform.name}");
                 targetToFollow = hit.transform;
                 isFollowing = true;
+                name.Show(hit.transform.name);
+                description.Show(hit.transform.name);
             }
             else
             {
@@ -75,6 +81,8 @@ public class CameraMovement : MonoBehaviour
                     Debug.Log("Raycast hit nothing at all.");
                 }
 
+                name.Hide();
+                description.Hide();
                 isFollowing = false;
                 targetToFollow = null;
             }
