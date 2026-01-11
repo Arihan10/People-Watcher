@@ -155,14 +155,16 @@ public class Character : MonoBehaviour
     }
 
     /// <summary>
-    /// Coroutine that waits for the character to stop moving, then calls Interact(true).
+    /// Coroutine that waits for the character to stop moving, then looks at the object and calls Interact(true).
     /// </summary>
-    private IEnumerator WaitForMovementAndInteract()
+    /// <param name="objectName">The name of the object to look at after reaching destination.</param>
+    private IEnumerator WaitForMovementAndInteract(string objectName)
     {
         // Wait until the character is no longer walking or running
         yield return new WaitUntil(() => !characterBehaviour.IsWalking && !characterBehaviour.IsRunning);
         
-        // Character has reached destination, now interact
+        // Character has reached destination, look at the object and interact
+        characterBehaviour.LookTo(objectName);
         characterBehaviour.Interact(true);
     }
 
@@ -184,23 +186,27 @@ public class Character : MonoBehaviour
                 break;
 
             case "use_object":
-                characterBehaviour.MoveTo(props["object_name"].ToString(), false);
-                StartCoroutine(WaitForMovementAndInteract());
+                string objName = props["object_name"].ToString();
+                characterBehaviour.MoveTo(objName, false);
+                StartCoroutine(WaitForMovementAndInteract(objName));
                 break;
 
             case "speak_in_conversation":
+                characterBehaviour.LookTo(props["target_character"].ToString());
                 characterBehaviour.Say(props["dialogue"].ToString(), 5);
                 break;
 
             case "fight_in_conversation":
                 Debug.Log($"{name} performs {props["action"]} on {props["target_character"]}");
                 GameObject.Find(props["target_character"].ToString())?.GetComponent<Character>()?.AddDecide($"{name} started fighting you!");
+                characterBehaviour.LookTo(props["target_character"].ToString());
                 characterBehaviour.Fight(true);
                 break;
 
             case "romance_in_conversation":
                 Debug.Log($"{name} performs {props["action"]} with {props["target_character"]}");
                 GameObject.Find(props["target_character"].ToString())?.GetComponent<Character>()?.AddDecide($"{name} is kissing you!");
+                characterBehaviour.LookTo(props["target_character"].ToString());
                 characterBehaviour.Kiss(true);
                 break;
 

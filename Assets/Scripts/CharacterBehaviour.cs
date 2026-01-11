@@ -104,6 +104,47 @@ public class CharacterBehaviour : MonoBehaviour
     }
 
     /// <summary>
+    /// Rotates the character along the Y axis to face the nearest object with the given name.
+    /// </summary>
+    /// <param name="objectName">Name of the object(s) to look at. Will look at the nearest one if multiple exist.</param>
+    public void LookTo(string objectName)
+    {
+        // Find all objects with the given name
+        GameObject[] allObjects = GameObject.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+        GameObject nearestObject = null;
+        float nearestDistance = float.MaxValue;
+
+        foreach (GameObject obj in allObjects)
+        {
+            if (obj.name == objectName)
+            {
+                float distance = Vector3.Distance(transform.position, obj.transform.position);
+                if (distance < nearestDistance)
+                {
+                    nearestDistance = distance;
+                    nearestObject = obj;
+                }
+            }
+        }
+
+        if (nearestObject == null)
+        {
+            Debug.LogWarning($"No object with name '{objectName}' found in scene.");
+            return;
+        }
+
+        // Calculate direction to target on the XZ plane (ignoring Y)
+        Vector3 direction = nearestObject.transform.position - transform.position;
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude > 0.001f)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(direction);
+            transform.rotation = targetRotation;
+        }
+    }
+
+    /// <summary>
     /// Move the character to the nearest object with the given name using the NavMeshAgent on this GameObject.
     /// </summary>
     /// <param name="objectName">Name of the object(s) to move to. Will move to the nearest one if multiple exist.</param>
